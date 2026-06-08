@@ -417,7 +417,7 @@ uint8 S9xGetSA1 (uint32 address)
 	return (byte);
     }
     default:	
-	printf ("R: %04x\n", address);
+	printf ("R: %04x\n", (unsigned int) address);
 	break;
     }
     return (Memory.FillRAM [address]);

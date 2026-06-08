@@ -40,7 +40,7 @@ static int last_write_pos = 0;
 static int curbuffer = 0;
 
 /* the address of the sound ram from the SH4 side */
-#define SPU_RAM_BASE            0xa0800000
+// #define SPU_RAM_BASE            0xa0800000
 
 /* buffer size in bytes */
 //uint32 BUFFER_SIZE = 0x10000;
@@ -115,8 +115,8 @@ static void scherzo_process_filters(void **buffer, int *samplecnt) {
 /* Performs stereo seperation for the two channels; this routine
    has been optimized for the SH-4. */
 static void scherzo_sep_data(void *buffer, int len) {
-	register int16	*bufsrc, *bufdst;
-	register int	x, y, cnt;
+	int16	*bufsrc, *bufdst;
+	int	x, y, cnt;
 
 	if (stereo) {
 		bufsrc = (int16*)buffer;
@@ -313,7 +313,7 @@ void scherzo_snd_stream_stop() {
 /* Poll streamer to load more data if neccessary */
 int scherzo_snd_stream_poll() {
 	uint32		ch0pos, ch1pos;
-	int		realbuffer;
+//	int		realbuffer;
 	int		current_play_pos;
 	int		needed_samples;
 	int		got_samples;
@@ -330,7 +330,7 @@ int scherzo_snd_stream_poll() {
 		return -1;
 	}
 	
-	realbuffer = !((ch0pos < (BUFFER_SIZE/4)) && (ch1pos < (BUFFER_SIZE/4)));
+//	realbuffer = !((ch0pos < (BUFFER_SIZE/4)) && (ch1pos < (BUFFER_SIZE/4)));
 
 	current_play_pos = (ch0pos < ch1pos)?(ch0pos):(ch1pos);
 
