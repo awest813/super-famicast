@@ -453,11 +453,11 @@ void DCMenu::Draw()
 	}
 	
 	unsigned int k = 0;
-	if (item_count > visible_row_count)
+	if (item_count > (unsigned int)visible_row_count)
 	{
-		if (m_current_index > first_half_visible_count)
+		if (m_current_index > (unsigned int)first_half_visible_count)
 			k = m_current_index - first_half_visible_count;
-		if ((item_count - m_current_index) < last_half_visible_count && item_count > first_half_visible_count)
+		if ((item_count - m_current_index) < (unsigned int)last_half_visible_count && item_count > (unsigned int)first_half_visible_count)
 			k = item_count - visible_row_count;
 	}
 	unsigned int final_k = k + visible_row_count;

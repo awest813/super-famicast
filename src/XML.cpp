@@ -294,11 +294,11 @@ CXML* CXML::Parse(const char* szDoc)
 		}
 		++pos;
 	}
-	delete doc;
+	delete[] doc;
 	return root;
 parse_failed:
 	if (root)
 		delete root;
-	delete doc;
+	delete[] doc;
 	return NULL;
 }

@@ -47,14 +47,18 @@ int CPVRTexture::LoadBMP(const char* filename, pvr_list_t list, int filtering)
     uint32 w_count = 0;
     uint32 h_count = 0;
     uint32 last_val;
-    while ((m_tex_width = (last_val = m_tex_width) / 2) != 0)
+    while ((m_tex_width = (last_val = m_tex_width) / 2) != 0) {
     	++w_count;
-	if ((last_val % 2) != 0)
+    }
+	if ((last_val % 2) != 0) {
 		++w_count;
-	while ((m_tex_height = (last_val = m_tex_height) / 2) != 0)
+    }
+	while ((m_tex_height = (last_val = m_tex_height) / 2) != 0) {
     	++h_count;
-	if ((last_val % 2) != 0)
+    }
+	if ((last_val % 2) != 0) {
 		++h_count;
+    }
 	m_tex_width = (int32) powf(2, w_count);
 	m_tex_height = (int32) powf(2, h_count);
 	uint16 tex_byte_size = sizeof(uint16) * m_tex_width * m_tex_height;
@@ -102,7 +106,7 @@ void CPVRTexture::FreeAll()
 
 void CPVRTexture::SetCurrentIndex(uint32 index)
 {
-	if (m_current_index == index)
+	if (m_current_index == (int32)index)
 		return;
 	m_current_index = index;
 	uint16* raw = m_raws[index];

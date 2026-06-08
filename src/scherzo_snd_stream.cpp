@@ -119,21 +119,15 @@ static void scherzo_sep_data(void *buffer, int len) {
 	int	x, y, cnt;
 
 	if (stereo) {
-		bufsrc = (int16*)buffer;
-		bufdst = sep_buffer[0];
-		x = 0; y = 0; cnt = len / 2;
+		uint32 *bufsrc = (uint32*)buffer;
+		uint16 *bufdst0 = (uint16*)sep_buffer[0];
+		uint16 *bufdst1 = (uint16*)sep_buffer[1];
+		int cnt = len / 2;
 		do {
-			*bufdst = *bufsrc;
-			bufdst++; bufsrc+=2; cnt--;
-		} while (cnt > 0);
-
-		bufsrc = (int16*)buffer; bufsrc++;
-		bufdst = sep_buffer[1];
-		x = 1; y = 0; cnt = len / 2;
-		do {
-			*bufdst = *bufsrc;
-			bufdst++; bufsrc+=2; cnt--;
-			x+=2; y++;
+			uint32 sample = *bufsrc++;
+			*bufdst0++ = (uint16)(sample & 0xFFFF);
+			*bufdst1++ = (uint16)(sample >> 16);
+			cnt--;
 		} while (cnt > 0);
 	} else {
 		memcpy(sep_buffer[0], buffer, len);
@@ -370,8 +364,8 @@ int scherzo_snd_stream_poll() {
 		}
 
 		scherzo_sep_data(data, needed_samples * 2);
-		spu_memload(spu_ram_sch1 + (last_write_pos * 2), (uint8*)sep_buffer[0], needed_samples * 2);
-		spu_memload(spu_ram_sch2 + (last_write_pos * 2), (uint8*)sep_buffer[1], needed_samples * 2);
+		spu_dma_transfer(sep_buffer[0], spu_ram_sch1 + (last_write_pos * 2), needed_samples * 2, 0, NULL, 0);
+		spu_dma_transfer(sep_buffer[1], spu_ram_sch2 + (last_write_pos * 2), needed_samples * 2, 0, NULL, 0);
 
 		last_write_pos += needed_samples;
 		if (last_write_pos >= (BUFFER_SIZE/2))

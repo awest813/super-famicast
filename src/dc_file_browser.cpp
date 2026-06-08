@@ -149,7 +149,7 @@ void DCFileBrowser::OnChooseDir(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 void DCFileBrowser::OnChooseFile(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
 	DCFileBrowser* pBrowser = (DCFileBrowser*) pMenu->user_data;
-	sprintf(pBrowser->m_file_path, "%s/%s", pBrowser->m_dir, pMenuItem->GetText());
+	snprintf(pBrowser->m_file_path, 4096, "%s/%s", pBrowser->m_dir, pMenuItem->GetText());
 	pBrowser->m_found = true;
 	pBrowser->m_menu.Stop();
 }

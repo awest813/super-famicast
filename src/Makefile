@@ -17,7 +17,7 @@ MY_AFLAGS = -Wa,-little -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN
 OBJS += $(ASM_CPU_OBJS)
 
 KOS_EXTRA_FLAGS = -D_XBOX -DUNZIP_SUPPORT -DNOASM -DSDD1_DECOMP -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN
-KOS_OPTIMIZATION_FLAGS = -Ofast -ffast-math -fomit-frame-pointer -fno-exceptions -mrelax -m4-single-only -fstrict-aliasing -falign-functions=4 -falign-loops=4 -falign-labels=4 -falign-jumps=4
+KOS_OPTIMIZATION_FLAGS = -Ofast -ffast-math -fomit-frame-pointer -fno-exceptions -mrelax -m4-single-only -fno-strict-aliasing -falign-functions=4 -falign-loops=4 -falign-labels=4 -falign-jumps=4
 KOS_CFLAGS += $(KOS_EXTRA_FLAGS) $(KOS_OPTIMIZATION_FLAGS)
 KOS_CPPFLAGS += $(KOS_EXTRA_FLAGS) $(KOS_OPTIMIZATION_FLAGS) -fno-rtti
 
