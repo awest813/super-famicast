@@ -165,12 +165,12 @@ _S9xSA1MainLoop:
 	mov #IRQ,r0
 	tst r0,FLAGS
 	bf .nosa1irq2
-	mov.b WaitingForInterrupt,r0
+	mov.b SA1WaitingForInterrupt,r0
 	tst r0,r0
 	bt .nosa1wait
 	mov #0,r0
 	add #1,PC
-	mov.b r0,WaitingForInterrupt
+	mov.b r0,SA1WaitingForInterrupt
 .nosa1wait:
 	mov.l S9xOpcode_IRQ,r3
 	jsr @r3
@@ -185,6 +185,9 @@ _S9xSA1MainLoop:
 	mov.b SA1Executing,r0
 	tst r0,r0
 	bt .exit
+	mov.b SA1WaitingForInterrupt,r0
+	tst r0,r0
+	bf .exit
 	mov.l r1,@-r15
 #ifdef DEBUGGER
 	testb $TRACE_FLAG, SA1Flags
@@ -3309,46 +3312,6 @@ OpCB:
 	mov #1,r0
 	add #-1,PC
 	mov.b r0,SA1WaitingForInterrupt
-#if 0
-// XXX: FIXME
-	movb Shutdown, %al
-	testb %al, %al
-	je .NoShutdown
-	movl NextEvent, CYCLES
-	cmpb $0, APUExecuting
-	je S9xSA1MainAsmLoop
-	movb $0, CPUExecuting
-.WAITExecAPU:
-#ifdef DEBUGGER
-	testb $2,APUFlags
-	je .WAITNoAPUS9xSA1Trace
-	STORE_REGISTERS
-	ccall S9xSA1TraceAPU
-	LOAD_REGISTERS
-.WAITNoAPUS9xSA1Trace:
-#endif
-	xorl %eax,%eax
-#ifdef SPC700_C
-	movl APUPC,%edx
-	SAVE_CYCLES
-	movb (%edx),%al
-#else
-	movb (APUPC),%al
-#endif
-	movl S9xAPUCycles(,%eax,4), %edx
-	movl S9xApuOpcodes(,%eax,4),%eax
-	addl %edx, APUCycles
-	call *%eax
-#ifdef SPC700_C
-        LOAD_CYCLES
-#endif
-	movl NextEvent, %eax
-	cmpl %eax, APUCycles
-	jl .WAITExecAPU
-	movb $1, CPUExecuting
-	jmp S9xSA1MainAsmLoop
-#endif
-.NoShutdown:
 	jmp @r13
 	nop
 
