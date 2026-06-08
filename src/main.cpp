@@ -1340,7 +1340,7 @@ void ReadJoysticks ()
 						if (g_sound_mode)
   							scherzo_snd_stream_stop();
 						InGameMenu();
-						memset(sound_buf, 0, OGG_BUF_SIZE);
+						memset(sound_buf, 0, SFCAST_SOUND_BUF_SIZE);
 						if (g_sound_mode)
 						{
 							first_sfcastGetSound = true;
@@ -1383,7 +1383,7 @@ void ReadJoysticks ()
 						if (g_sound_mode)
   							scherzo_snd_stream_stop();
 						InGameMenu();
-						memset(sound_buf, 0, OGG_BUF_SIZE);
+						memset(sound_buf, 0, SFCAST_SOUND_BUF_SIZE);
 						if (g_sound_mode)
 						{
 							first_sfcastGetSound = true;
