@@ -465,8 +465,8 @@ void DMADoneSoDrawNow(void* data)
 
 static void display_snes_screen()
 {
-	pvr_wait_ready ();
 	sq_cpy(snes_texture_addrs[texture_index], GFX.Screen, GFX_Screen_Size);
+	pvr_wait_ready ();
 	
 	//pvr_txr_load_dma(GFX.Screen, snes_texture_addrs[texture_index], GFX_Screen_Size, 0, DMADoneSoDrawNow, NULL);
 	//icache_flush_range((uint32) GFX.Screen, GFX_Screen_Size);

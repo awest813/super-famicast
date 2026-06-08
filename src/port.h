@@ -78,7 +78,7 @@
 
 #include "utils.h"
 
-#define SCHERZO_INLINE	inline
+#define SCHERZO_INLINE	inline __attribute__((always_inline))
 
 #ifdef __GNUC__
 #define LIKELY(expression) (__builtin_expect(!!(expression), 1))
