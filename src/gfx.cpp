@@ -85,6 +85,7 @@
 #include "apu.h"
 #include "cheats.h"
 #include "screenshot.h"
+#include "sfcast_profile.h"
 
 #define M7 19
 #define M8 19
@@ -528,6 +529,7 @@ void S9xBuildDirectColourMaps ()
 
 void S9xStartScreenRefresh ()
 {
+	SfcastProfileRenderStart();
     if (GFX.InfoStringTimeout > 0 && --GFX.InfoStringTimeout == 0)
 		GFX.InfoString = NULL;
 
@@ -537,6 +539,7 @@ void S9xStartScreenRefresh ()
 		if (!S9xInitUpdate ())
 		{
 			IPPU.RenderThisFrame = FALSE;
+			SfcastProfileRenderEnd();
 			return;
 		}
 		IPPU.RenderedFramesCount++;
@@ -669,9 +672,10 @@ void S9xEndScreenRefresh ()
 	    	{
 				S9xAutoSaveSRAM ();
 				CPU.SRAMModified = FALSE;
-	    	}
-		}
+	    }
     }
+	SfcastProfileRenderEnd();
+}
 }
 
 void S9xSetInfoString (const char *string)

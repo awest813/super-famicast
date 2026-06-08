@@ -9,6 +9,32 @@ current version of snes9x code used is v1.42. It also makes use of the same
 SH4 assembler CPU core found in DreamSNES courtesy of Marcus Comstedt and
 the DreamSNES team. A huge thanks to them!
 
+## Project Planning
+
+* [Super Plan](SUPER_PLAN.md) - combined roadmap for accuracy, performance,
+  Dreamcast-specific optimization, sound sync, compatibility, and releases.
+* [Building](BUILDING.md) - KOS/SH-ELF build setup, current build shape, and
+  verified local DreamSDK commands.
+* [Baseline Manifest](BASELINE_MANIFEST.md) - Phase 0 artifact sizes, hashes,
+  toolchain identity, and untested runtime gaps.
+* [Accuracy Harness](ACCURACY_HARNESS.md) - Phase 1 deterministic frame
+  signature logging.
+* [Test ROM Manifest](TEST_ROMS.md) - exact test ROM names and hashes to fill
+  before trusting comparisons.
+* [Compatibility Matrix](COMPATIBILITY_MATRIX.md) - repeatable game and test
+  ROM tracking.
+* [Performance Baseline](PERFORMANCE_BASELINE.md) - FPS, audio, frameskip, and
+  compiler flag measurement log.
+* [Developer Checklist](DEVELOPER_CHECKLIST.md) - first sprint checklist for
+  builds, SA-1 fallback, measurements, and safety gates.
+
+Quick local build from PowerShell:
+
+```powershell
+. .\tools\Import-DreamSdkEnv.ps1
+.\tools\build.ps1 -Profile release -Clean -CdImage
+```
+
 ## Feature Summary
 
 * Many games emulate at fullspeed with frame skipping.

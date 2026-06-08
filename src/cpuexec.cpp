@@ -87,6 +87,8 @@
 #include "fxemu.h"
 #include "sa1.h"
 #include "spc7110.h"
+#include "sfcast_accuracy.h"
+#include "sfcast_profile.h"
 
 //uint32 g_code_counts[0x100];
 
@@ -98,6 +100,7 @@ inline void ExecOpCode()
 void S9xMainLoop (void)
 {
 	//uint32 times_through = 0;
+	SfcastProfileFrameStart();
     for (;;)
     {
     	//++times_through;
@@ -166,8 +169,11 @@ void S9xMainLoop (void)
     APURegisters.PC = IAPU.PC - IAPU.RAM;
     S9xAPUPackStatus();
     if (CPU.Flags & SCAN_KEYS_FLAG)
-    {
+	{
+		SfcastProfileCpuEnd();
 	    S9xSyncSpeed();
+		SfcastProfileFrameEnd(IPPU.RenderThisFrame, IPPU.RenderThisFrame ? 0 : 1);
+		SfcastAccuracyFrameEnd();
 		CPU.Flags &= ~SCAN_KEYS_FLAG;
     }
     if (CPU.BRKTriggered && Settings.SuperFX && !CPU.TriedInterleavedMode2)

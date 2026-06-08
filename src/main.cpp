@@ -26,6 +26,7 @@
 #include "dc_file_browser.h"
 #include "scherzo_snd_stream.h"
 #include "utils.h"
+#include "sfcast_profile.h"
 
 uint32 g_soundModes[] = { 	0,
 							8192,
@@ -645,7 +646,9 @@ void draw_worker(void *param)
 
 extern "C" bool8 S9xDeinitUpdate ()
 {
+	SfcastProfileDisplayStart();
 	display_snes_screen();
+	SfcastProfileDisplayEnd();
 	//draw_da_frame_mr_thread = true;
 	return TRUE;
 }

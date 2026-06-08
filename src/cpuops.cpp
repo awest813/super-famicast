@@ -3936,7 +3936,9 @@ static void Op42 (void)
 /*****************************************************************************/
 // SH4 routines
 
+#if __has_include("cpuops_new.h")
 #include "cpuops_new.h"
+#endif
 
 /*****************************************************************************/
 /* CPU-S9xOpcodes Definitions                                                                    */

@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# Local ROM test media. Keep ROM files out of source control.
+src/cd/roms/*
+!src/cd/roms/roms_here.txt
