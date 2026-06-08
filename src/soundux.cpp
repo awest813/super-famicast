@@ -1455,7 +1455,10 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 		if (SoundData.echo_enable)
 			memset (EchoBuffer, 0, sample_count * sizeof (EchoBuffer [0]));
 		
-		MixStereo (sample_count);
+		if (Settings.Stereo)
+			MixStereo (sample_count);
+		else
+			MixMono (sample_count);
     }
 	
     /* Mix and convert waveforms */
@@ -1486,8 +1489,8 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 						SoundData.echo_ptr = 0;
 
 					I = (MixBuffer [J] * 
-						SoundData.master_volume [J & 1] +
-						E * SoundData.echo_volume [J & 1]) / VOL_DIV16;
+						SoundData.master_volume [Settings.Stereo ? (J & 1) : 0] +
+						E * SoundData.echo_volume [Settings.Stereo ? (J & 1) : 0]) / VOL_DIV16;
 
 					CLIP16(I);
 					((signed short *) buffer)[J + O] = I;
@@ -1519,8 +1522,8 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 						SoundData.echo_ptr = 0;
 
 					I = (MixBuffer [J] * 
-						SoundData.master_volume [J & 1] +
-						E * SoundData.echo_volume [J & 1]) / VOL_DIV16;
+						SoundData.master_volume [Settings.Stereo ? (J & 1) : 0] +
+						E * SoundData.echo_volume [Settings.Stereo ? (J & 1) : 0]) / VOL_DIV16;
 
 					CLIP16(I);
 					((signed short *) buffer)[J + O] = I;
@@ -1533,7 +1536,7 @@ void S9xMixSamplesO (uint8 *buffer, int sample_count, int byte_offset)
 			for (J = 0; J < sample_count; J++)
 			{
 				I = (MixBuffer [J] * 
-					SoundData.master_volume [J & 1]) / VOL_DIV16;
+					SoundData.master_volume [Settings.Stereo ? (J & 1) : 0]) / VOL_DIV16;
 
 				CLIP16(I);
 				((signed short *) buffer)[J + O] = I;

@@ -4,6 +4,9 @@
   (c) Copyright 2002 - 2004 Marcus Comstedt (marcus@mc.pp.se)
 ******************************************************************************/
 
+#ifndef _ASMSTRUC_H_
+#define _ASMSTRUC_H_
+
 /******************************************************************************
   Snes9x - Portable Super Nintendo Entertainment System (TM) emulator.
  
@@ -286,3 +289,4 @@
   	mov.l @r15+,r6
 .endm
 
+#endif /* _ASMSTRUC_H_ */

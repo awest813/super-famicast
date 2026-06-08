@@ -2,11 +2,94 @@
 #include "dc_controller.h"
 #include "scherzo_snd_stream.h"
 
-extern struct
+
+static void draw_highlight_bar(float x, float y, float w, float h, float z, uint32 color)
 {
-	int32 x1, y1, x2, y2;
-	float xscale, yscale;
-} screen_adjustments;
+	pvr_poly_cxt_t cxt;
+	pvr_poly_hdr_t hdr;
+	pvr_vertex_t vert;
+
+	pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
+	pvr_poly_compile(&hdr, &cxt);
+	pvr_prim(&hdr, sizeof(hdr));
+
+	uint8 r = (color >> 16) & 0xFF;
+	uint8 g = (color >> 8) & 0xFF;
+	uint8 b = color & 0xFF;
+	uint32 color_left = PVR_PACK_COLOR(0.35f, r / 255.0f, g / 255.0f, b / 255.0f);
+	uint32 color_right = PVR_PACK_COLOR(0.0f, r / 255.0f, g / 255.0f, b / 255.0f);
+
+	vert.flags = PVR_CMD_VERTEX;
+	vert.x = x;
+	vert.y = y + h;
+	vert.z = z;
+	vert.u = 0;
+	vert.v = 0;
+	vert.argb = color_left;
+	vert.oargb = 0;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.y = y;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.x = x + w;
+	vert.y = y + h;
+	vert.argb = color_right;
+	pvr_prim(&vert, sizeof(vert));
+
+	vert.flags = PVR_CMD_VERTEX_EOL;
+	vert.y = y;
+	pvr_prim(&vert, sizeof(vert));
+}
+
+static void draw_arrow(float x, float y, float size, float z, uint32 color, bool up)
+{
+	pvr_poly_cxt_t cxt;
+	pvr_poly_hdr_t hdr;
+	pvr_vertex_t vert;
+
+	pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
+	pvr_poly_compile(&hdr, &cxt);
+	pvr_prim(&hdr, sizeof(hdr));
+
+	vert.flags = PVR_CMD_VERTEX;
+	vert.z = z;
+	vert.argb = color;
+	vert.oargb = 0;
+	vert.u = 0;
+	vert.v = 0;
+
+	if (up)
+	{
+		vert.x = x;
+		vert.y = y - size / 2;
+		pvr_prim(&vert, sizeof(vert));
+
+		vert.x = x - size;
+		vert.y = y + size / 2;
+		pvr_prim(&vert, sizeof(vert));
+
+		vert.flags = PVR_CMD_VERTEX_EOL;
+		vert.x = x + size;
+		vert.y = y + size / 2;
+		pvr_prim(&vert, sizeof(vert));
+	}
+	else
+	{
+		vert.x = x;
+		vert.y = y + size / 2;
+		pvr_prim(&vert, sizeof(vert));
+
+		vert.x = x - size;
+		vert.y = y - size / 2;
+		pvr_prim(&vert, sizeof(vert));
+
+		vert.flags = PVR_CMD_VERTEX_EOL;
+		vert.x = x + size;
+		vert.y = y - size / 2;
+		pvr_prim(&vert, sizeof(vert));
+	}
+}
 
 DCMenuItem::DCMenuItem()
 {
@@ -426,6 +509,15 @@ void DCMenu::Draw()
 		
 		w.x = (float) curx;
 		w.y = (float) cury;
+		if (((int16) k) == m_current_index)
+		{
+			float padding_y = 2.0f;
+			float bar_x = screen_adjustments.x1 + (x * screen_adjustments.xscale);
+			float bar_y = screen_adjustments.y1 + ((cury - outup - padding_y) * screen_adjustments.yscale);
+			float bar_w = (max_width) * screen_adjustments.xscale;
+			float bar_h = (ystep + padding_y * 2) * screen_adjustments.yscale;
+			draw_highlight_bar(bar_x, bar_y, bar_w, bar_h, depth - 0.5f, m_selected_color);
+		}
 		DrawStringWithBorder(temptext, m_font_context, w,
   						(((int16) k) == m_current_index) ? tempcolor : curitem->color, PVR_PACK_COLOR(1.0f, 0, 0, 0));
 		unsigned int choice_count = curitem->m_choice_texts.size();
@@ -452,6 +544,39 @@ void DCMenu::Draw()
 		}
 		cury += ystep;
 	}
+
+	// Draw scroll indicators if list exceeds screen height
+	if (item_count > (unsigned int)visible_row_count)
+	{
+		float center_x = screen_adjustments.x1 + ((x + max_width / 2) * screen_adjustments.xscale);
+		float arrow_size = 8.0f * screen_adjustments.yscale;
+		uint32 arrow_color = m_color;
+		if (pulse)
+		{
+			float tempalpha = 0.70f + m_current_pulse * 2.0f;
+			if (tempalpha < 0.2f) tempalpha = 0.2f;
+			if (tempalpha > 1.0f) tempalpha = 1.0f;
+			arrow_color = PACK_ALPHA(arrow_color, tempalpha);
+		}
+
+		unsigned int first_visible = 0;
+		if (m_current_index > first_half_visible_count)
+			first_visible = m_current_index - first_half_visible_count;
+		if (((int16)(item_count - m_current_index)) < last_half_visible_count && item_count > (unsigned int)first_half_visible_count)
+			first_visible = item_count - visible_row_count;
+
+		if (first_visible > 0)
+		{
+			float arrow_y = screen_adjustments.y1 + ((y - 12) * screen_adjustments.yscale);
+			draw_arrow(center_x, arrow_y, arrow_size, (float)depth, arrow_color, true);
+		}
+		if ((first_visible + visible_row_count) < item_count)
+		{
+			float arrow_y = screen_adjustments.y1 + ((y + visible_row_count * ystep + 12) * screen_adjustments.yscale);
+			draw_arrow(center_x, arrow_y, arrow_size, (float)depth, arrow_color, false);
+		}
+	}
+
 	if (m_draw_extra_callback)
 		m_draw_extra_callback(this);
 	if (m_background)
@@ -478,7 +603,7 @@ bool DCMenu::Run()
 	return success;
 }
 
-void DCMenu::Stop(bool cascade = false)
+void DCMenu::Stop(bool cascade)
 {
 	m_running = false;
 	if (cascade && m_parent)

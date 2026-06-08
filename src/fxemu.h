@@ -77,19 +77,7 @@
 
 #include <unistd.h>
 
-/* Types used by structures and code */
-#ifndef snes9x_types_defined
-#define snes9x_types_defined
-/* SCHERZO
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef unsigned int uint32;
-typedef unsigned char bool8;
-typedef signed char int8;
-typedef short int16;
-typedef int int32;
-*/
-#endif
+#include "port.h"
 
 #ifndef TRUE
 #define TRUE 1

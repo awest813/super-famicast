@@ -56,6 +56,13 @@ typedef struct {
 
 extern dc_screen_offset_t dc_screen_offset;
 
+struct SScreenAdjustments
+{
+	int32 x1, y1, x2, y2;
+	float xscale, yscale;
+};
+extern struct SScreenAdjustments screen_adjustments;
+
 extern pvr_vertex_t main_vert;
 
 void dc_screen_offset_init();

@@ -17,11 +17,6 @@ dc_maple_info_t dc_maple_controller_info[DC_MAPLE_INFO_SIZE];
 dc_maple_info_t dc_maple_mouse_info[DC_MAPLE_INFO_SIZE];
 dc_maple_info_t dc_maple_keyboard_info[DC_MAPLE_INFO_SIZE];
 
-extern struct
-{
-	int32 x1, y1, x2, y2;
-	float xscale, yscale;
-} screen_adjustments;
 
 void dc_maple_init ()
 {
@@ -256,7 +251,7 @@ void _OnNavDir(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 	file_t fpd = fs_open(my_dir, O_DIR | O_RDONLY);
 	if (!fpd)
 		return;
-	dirent_t* dirinfo;
+	const dirent_t* dirinfo;
 	while ((dirinfo = fs_readdir(fpd)))
 	{
 		if (dirinfo->size == -1)
@@ -286,44 +281,13 @@ bool BrowseForFile(const char* szStartingDir, char* szResult, plx_fcxt_t* font, 
 
 void dc_sq_cpy(void *dest, void *src, int n)
 {
-  uint32 *sq;
-  uint32 *d, *s;
-  
-  d = (uint32 *)(0xe0000000 | (((uint32)dest) & 0x03ffffe0));
-  s = (uint32 *)(src);
-  
-  /* Set store queue memory area as desired */
-  QACR0 = ((((uint32)dest)>>26)<<2)&0x1c;
-  QACR1 = ((((uint32)dest)>>26)<<2)&0x1c;
-  
-  n >>= 6;
-  while (n--) 
-  {
-    /* sq0 */ 
-    sq = d;
-    *sq++ = *s++; *sq++ = *s++;
-    *sq++ = *s++; *sq++ = *s++;
-    *sq++ = *s++; *sq++ = *s++;
-    *sq++ = *s++; *sq++ = *s++;
-    asm("pref @%0" : : "r" (d));
-    d += 8;
-    
-    /* sq1 */
-    sq = d;
-    *sq++ = *s++; *sq++ = *s++;
-    *sq++ = *s++; *sq++ = *s++;
-    *sq++ = *s++; *sq++ = *s++;
-    *sq++ = *s++; *sq++ = *s++;
-    asm("pref @%0" : : "r" (d));
-    d += 8;
-  }
+  /* Delegate to KOS 2.3 sq_cpy which handles QACR setup internally */
+  sq_cpy(dest, src, (size_t)n);
 }
 
 void dc_wait_sq_cpy_done ()
 {
-  /* wait for both store queues to complete */
-  *((uint32 *)(0xe0000000)) = 0;
-  *((uint32 *)(0xe0000020)) = 0;
+  sq_wait();
 }
 
 bool scherzo_bmp_load_texture(const char* filename, pvr_ptr_t* tex, uint32 *w, uint32 *h, uint32 *tex_width, uint32 *tex_height)

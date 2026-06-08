@@ -1,6 +1,7 @@
 #include "XML.h"
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <ctype.h>
 
 #ifdef XML_CREATE
@@ -86,7 +87,7 @@ const char* CXML::GetAttribute(const char* name)
 {
 	for (unsigned int k = 0; k < m_attribute_names.size(); ++k)
 	{
-		if (stricmp(m_attribute_names[k], name) == 0)
+		if (strcasecmp(m_attribute_names[k], name) == 0)
 			return m_attribute_values[k];
 	}
 	return NULL;
@@ -145,15 +146,15 @@ CXML* CXML::Find(const char* tagname, const char* attr_name, const char* attr_va
 	for (unsigned int k = 0; k < m_children.size(); ++k)
 	{
 		temp = m_children[k];
-		if (stricmp(temp->GetName(), tagname) == 0)
+		if (strcasecmp(temp->GetName(), tagname) == 0)
 		{
 			if (attr_name)
 			{
 				for (unsigned int n = 0; n < temp->m_attribute_names.size(); ++n)
 				{
-					if (stricmp(temp->m_attribute_names[n], attr_name) == 0)
+					if (strcasecmp(temp->m_attribute_names[n], attr_name) == 0)
 					{
-						if (!attr_val || stricmp(temp->m_attribute_values[n], attr_val) == 0)
+						if (!attr_val || strcasecmp(temp->m_attribute_values[n], attr_val) == 0)
 							return temp;
 					}
 				}

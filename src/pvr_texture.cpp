@@ -1,12 +1,8 @@
 #include "pvr_texture.h"
 #include "dc_utils.h"
+#include <strings.h>
 #include <math.h>
 
-extern struct
-{
-	int32 x1, y1, x2, y2;
-	float xscale, yscale;
-} screen_adjustments;
 
 CPVRTexture::CPVRTexture()
 {
@@ -39,7 +35,7 @@ int CPVRTexture::LoadBMP(const char* filename, pvr_list_t list, int filtering)
 {
 	for (uint32 k = 0; k < m_raw_filenames.size(); ++k)
 	{
-		if (m_raw_filenames[k] && stricmp(m_raw_filenames[k], filename) == 0)
+		if (m_raw_filenames[k] && strcasecmp(m_raw_filenames[k], filename) == 0)
 			return k;
 	}
 	uint16* raw = NULL;
@@ -68,7 +64,7 @@ int CPVRTexture::LoadBMP(const char* filename, pvr_list_t list, int filtering)
 		m_ptr = pvr_mem_malloc(tex_byte_size);
 		pvr_mem_stats();
 		pvr_poly_cxt_txr(&poly, list, PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED, m_tex_width,
-					 m_tex_height, m_ptr, filtering);
+					 m_tex_height, m_ptr, (pvr_filter_mode_t)filtering);
     	pvr_poly_compile(&m_hdr, &poly);
 	}
 	
@@ -167,7 +163,7 @@ void CPVRTexture::Draw(int16 x, int16 y, int16 z, float alpha)
 	pvr_prim (&vert, sizeof(vert));
 }
 
-void CPVRTexture::DrawFullscreen(int16 z, float alpha = 1.0f)
+void CPVRTexture::DrawFullscreen(int16 z, float alpha)
 {
 	pvr_vertex_t vert;
 

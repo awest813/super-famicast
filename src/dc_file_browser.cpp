@@ -1,4 +1,10 @@
 #include "dc_file_browser.h"
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+#endif
+
 
 DCFileBrowser::DCFileBrowser()
 {
@@ -34,7 +40,7 @@ bool DCFileBrowser::Browse(bool use_last)
 			file_t fpd = fs_open(m_dir, O_DIR | O_RDONLY);
 			if (!fpd)
 				return false;
-			dirent_t* dirinfo;
+			const dirent_t* dirinfo;
 			DCMenuItem* itemtemp = NULL;
 			char* dotpos = NULL;
 			bool found_ext = false;

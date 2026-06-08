@@ -127,11 +127,7 @@ void ShowSplash(const char* filename, uint16 duration, uint16 fade_duration, voi
 
 void PrintOffsetsAsm();
 
-struct
-{
-	int32 x1, y1, x2, y2;
-	float xscale, yscale;
-} screen_adjustments = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 1.0f, 1.0f};
+SScreenAdjustments screen_adjustments = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 1.0f, 1.0f};
 
 struct SSuperFamicastSettings
 {
@@ -151,7 +147,11 @@ struct SSuperFamicastSettings
 	bool auto_save_sram;
 	uint8 g_sound_mode;
 	//VERSION 2
+	bool stereo_sound;
+	char save_vmu[32];
 };
+
+char chosen_vmu[32] = "";
 
 bool music_is_playing = false;
 FILE* ogg_fp = NULL;
@@ -218,10 +218,20 @@ void StopMusic()
 
 bool FindFirstVMU(char* outPath)
 {
+	if (chosen_vmu[0] != '\0')
+	{
+		sprintf(outPath, "/vmu/%s", chosen_vmu);
+		file_t fpd = fs_open(outPath, O_DIR | O_RDONLY);
+		if (fpd)
+		{
+			fs_close(fpd);
+			return true;
+		}
+	}
 	file_t fpd = fs_open("/vmu", O_DIR | O_RDONLY);
 	if (!fpd)
 		return false;
-	dirent_t* dirinfo = fs_readdir(fpd);
+	const dirent_t* dirinfo = fs_readdir(fpd);
 	if (dirinfo)
 	{
 		sprintf(outPath, "/vmu/%s", dirinfo->name);
@@ -234,51 +244,50 @@ bool FindFirstVMU(char* outPath)
 
 void SaveSettings()
 {
-	file_t fpd = fs_open("/vmu", O_DIR | O_RDONLY);
-	if (!fpd)
-		return;
-	dirent_t* dirinfo;
-	uint8 vmu_count = 0;
-	while ((dirinfo = fs_readdir(fpd)))
+	char vmu_path[0x100];
+	if (!FindFirstVMU(vmu_path))
 	{
-		++vmu_count;
-		char ctemp[0x100];
-		sprintf(ctemp, "/vmu/%s/sfcast01.cfg", dirinfo->name);
-		FILE* fp = fopen(ctemp, "wb");
-		if (!fp)
-		{
-			sprintf(ctemp, "Error opening file on VMU %s", dirinfo->name);
-			ShowMsg(ctemp);
-			fs_close(fpd);
-			return;
-		}
-		
-		SSuperFamicastSettings out_settings;
-		out_settings.version = 1;
-		out_settings.screen_x1 = screen_adjustments.x1;
-		out_settings.screen_y1 = screen_adjustments.y1;
-		out_settings.screen_x2 = screen_adjustments.x2;
-		out_settings.screen_y2 = screen_adjustments.y2;
-		out_settings.screen_xscale = screen_adjustments.xscale;
-		out_settings.screen_yscale = screen_adjustments.yscale;
-		out_settings.bilinear_filtering = bilinear_filtering;
-		out_settings.use_analog[0] = use_analog[0];
-		out_settings.use_analog[1] = use_analog[1];
-		out_settings.use_analog[2] = use_analog[2];
-		out_settings.use_analog[3] = use_analog[3];
-		out_settings.SkipFrames = Settings.SkipFrames;
-		out_settings.DisplayFrameRate = Settings.DisplayFrameRate;
-		out_settings.auto_save_sram = auto_save_sram;
-		strcpy(out_settings.theme_dir, theme_dir);
-		out_settings.g_sound_mode = g_sound_mode;
-		
-		fwrite(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
-		fclose(fp);
-		sprintf(ctemp, "Settings saved to VMU %s", dirinfo->name);
-		ShowMsg(ctemp);
-		break;
+		ShowMsg("No VMU found to save settings");
+		return;
 	}
-	fs_close(fpd);
+	char ctemp[0x100];
+	sprintf(ctemp, "%s/sfcast01.cfg", vmu_path);
+	FILE* fp = fopen(ctemp, "wb");
+	if (!fp)
+	{
+		sprintf(ctemp, "Error saving settings to %s", vmu_path);
+		ShowMsg(ctemp);
+		return;
+	}
+	
+	SSuperFamicastSettings out_settings;
+	memset(&out_settings, 0, sizeof(SSuperFamicastSettings));
+	out_settings.version = 2;
+	out_settings.screen_x1 = screen_adjustments.x1;
+	out_settings.screen_y1 = screen_adjustments.y1;
+	out_settings.screen_x2 = screen_adjustments.x2;
+	out_settings.screen_y2 = screen_adjustments.y2;
+	out_settings.screen_xscale = screen_adjustments.xscale;
+	out_settings.screen_yscale = screen_adjustments.yscale;
+	out_settings.bilinear_filtering = bilinear_filtering;
+	out_settings.use_analog[0] = use_analog[0];
+	out_settings.use_analog[1] = use_analog[1];
+	out_settings.use_analog[2] = use_analog[2];
+	out_settings.use_analog[3] = use_analog[3];
+	out_settings.SkipFrames = Settings.SkipFrames;
+	out_settings.DisplayFrameRate = Settings.DisplayFrameRate;
+	out_settings.auto_save_sram = auto_save_sram;
+	strcpy(out_settings.theme_dir, theme_dir);
+	out_settings.g_sound_mode = g_sound_mode;
+	out_settings.stereo_sound = Settings.Stereo;
+	strcpy(out_settings.save_vmu, chosen_vmu);
+	
+	fwrite(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
+	fclose(fp);
+	
+	char msg[0x100];
+	sprintf(msg, "Settings saved to VMU %s", vmu_path + 5); // strip "/vmu/"
+	ShowMsg(msg);
 }
 
 void LoadSettings()
@@ -286,7 +295,7 @@ void LoadSettings()
 	file_t fpd = fs_open("/vmu", O_DIR | O_RDONLY);
 	if (!fpd)
 		return;
-	dirent_t* dirinfo;
+	const dirent_t* dirinfo;
 	bool loaded = false;
 	while ((dirinfo = fs_readdir(fpd)))
 	{
@@ -297,13 +306,13 @@ void LoadSettings()
 			continue;
 		
 		SSuperFamicastSettings out_settings;
+		memset(&out_settings, 0, sizeof(SSuperFamicastSettings));
 		
 		fread(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
 		fclose(fp);
 		
-		switch (out_settings.version)
+		if (out_settings.version >= 1)
 		{
-		default:
 			screen_adjustments.x1 = out_settings.screen_x1;
 			screen_adjustments.y1 = out_settings.screen_y1;
 			screen_adjustments.x2 = out_settings.screen_x2;
@@ -320,12 +329,21 @@ void LoadSettings()
 			auto_save_sram = out_settings.auto_save_sram;
 			strcpy(theme_dir, out_settings.theme_dir);
 			g_sound_mode = out_settings.g_sound_mode;
-		};
+		}
+		if (out_settings.version >= 2)
+		{
+			Settings.Stereo = out_settings.stereo_sound;
+			strcpy(chosen_vmu, out_settings.save_vmu);
+		}
+		else
+		{
+			Settings.Stereo = TRUE;
+			chosen_vmu[0] = '\0';
+		}
 		loaded = true;
 		break;
 	}
-	//if (!loaded)
-	//	ShowMsg("No VMU contains settings");
+	fs_close(fpd);
 }
 
 static pvr_init_params_t pvr_params = 
@@ -430,7 +448,7 @@ static void commit_texture_fullscreen(pvr_poly_hdr_t* poly, uint16 width, uint16
 	pvr_prim (&vert, sizeof(vert));
 }
 
-void DMADoneSoDrawNow(ptr_t data)
+void DMADoneSoDrawNow(void* data)
 {
 	//pvr_wait_ready ();
 	pvr_scene_begin ();
@@ -468,6 +486,7 @@ static void display_snes_screen()
 }
 
 /* romdisk */
+extern "C" void fs_romdisk_mount_builtin_legacy(void);
 extern uint8 romdisk_boot[];
 KOS_INIT_ROMDISK(romdisk_boot);
 
@@ -795,9 +814,18 @@ void* sfcastGetSound(int samples_requested, int* samples_returned)
 		first_sfcastGetSound = false;
 		return sound_buf;
 	}
-	if ((samples_requested / 2) > (SFCAST_SOUND_BUF_SIZE / 4))
-		samples_requested = SFCAST_SOUND_BUF_SIZE / 4;
-	S9xMixSamplesO(sound_buf, samples_requested / 2, 0);
+	if (Settings.Stereo)
+	{
+		if ((samples_requested / 2) > (SFCAST_SOUND_BUF_SIZE / 4))
+			samples_requested = SFCAST_SOUND_BUF_SIZE / 4;
+		S9xMixSamplesO(sound_buf, samples_requested / 2, 0);
+	}
+	else
+	{
+		if (samples_requested > (SFCAST_SOUND_BUF_SIZE / 2))
+			samples_requested = SFCAST_SOUND_BUF_SIZE / 2;
+		S9xMixSamplesO(sound_buf, samples_requested, 0);
+	}
 	*samples_returned = samples_requested;
 	return sound_buf;
 }
@@ -1316,7 +1344,7 @@ void ReadJoysticks ()
 						if (g_sound_mode)
 						{
 							first_sfcastGetSound = true;
-  							scherzo_snd_stream_start(g_soundModes[g_sound_mode], 1);
+  							scherzo_snd_stream_start(g_soundModes[g_sound_mode], Settings.Stereo ? 1 : 0);
 						}
 					}
 				}
@@ -1359,7 +1387,7 @@ void ReadJoysticks ()
 						if (g_sound_mode)
 						{
 							first_sfcastGetSound = true;
-  							scherzo_snd_stream_start(g_soundModes[g_sound_mode], 1);
+  							scherzo_snd_stream_start(g_soundModes[g_sound_mode], Settings.Stereo ? 1 : 0);
 						}
 					}
 				}
@@ -1617,6 +1645,53 @@ void OnLoadGame(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 	}
 }
 
+void OnChangeSoundOutput(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
+{
+	Settings.Stereo = value ? TRUE : FALSE;
+}
+
+struct VMUInfo
+{
+	char name[16];
+	char path[32];
+};
+
+XArray<VMUInfo> connected_vmus;
+
+void ScanVMUs()
+{
+	connected_vmus.removeAll();
+	file_t fpd = fs_open("/vmu", O_DIR | O_RDONLY);
+	if (fpd)
+	{
+		const dirent_t* dirinfo;
+		while ((dirinfo = fs_readdir(fpd)))
+		{
+			VMUInfo info;
+			strcpy(info.name, dirinfo->name);
+			sprintf(info.path, "/vmu/%s", dirinfo->name);
+			connected_vmus.push(info);
+		}
+		fs_close(fpd);
+	}
+}
+
+void OnChangeVMUSlot(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
+{
+	if (value == 0)
+	{
+		chosen_vmu[0] = '\0';
+	}
+	else
+	{
+		int idx = value - 1;
+		if (idx >= 0 && idx < (int)connected_vmus.size())
+		{
+			strcpy(chosen_vmu, connected_vmus[idx].name);
+		}
+	}
+}
+
 void OnChangeBilinear(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
 	bilinear_filtering = value ? true : false;
@@ -1682,6 +1757,10 @@ void OnOptions(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 	testchoice->AddChoice("On", 1, auto_save_sram);
 	testchoice->AddChoice("Off", 0, !auto_save_sram);
 	
+	testchoice = options_menu.AddItem("Sound Output", OnChangeSoundOutput);
+	testchoice->AddChoice("Stereo", 1, Settings.Stereo);
+	testchoice->AddChoice("Mono", 0, !Settings.Stereo);
+
 	testchoice = options_menu.AddItem("Sound Quality", OnChangeSoundEnabled);
 	testchoice->AddChoice("Off", 0, g_sound_mode == 0);
 	testchoice->AddChoice("1", 1, g_sound_mode == 1);
@@ -1692,6 +1771,17 @@ void OnOptions(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 	testchoice->AddChoice("6", 6, g_sound_mode == 6);
 	testchoice->AddChoice("7", 7, g_sound_mode == 7);
 	
+	ScanVMUs();
+	if (connected_vmus.size() > 0)
+	{
+		testchoice = options_menu.AddItem("Save VMU Slot", OnChangeVMUSlot);
+		testchoice->AddChoice("Auto", 0, chosen_vmu[0] == '\0');
+		for (uint32 i = 0; i < connected_vmus.size(); ++i)
+		{
+			testchoice->AddChoice(connected_vmus[i].name, i + 1, strcmp(chosen_vmu, connected_vmus[i].name) == 0);
+		}
+	}
+
 	DCMenuItem* adjust_item = options_menu.AddItem("Adjust Screen", OnAdjustScreen);
 	adjust_item->user_data = (void*) 0;
 	
@@ -1780,7 +1870,7 @@ void OnChangeTheme(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 	file_t fpd = fs_open("/cd/themes", O_DIR | O_RDONLY);
 	if (!fpd)
 		return;
-	dirent_t* dirinfo;
+	const dirent_t* dirinfo;
  	while ((dirinfo = fs_readdir(fpd)))
  	{
  		if (strcmp(dirinfo->name, theme_dir) == 0)
@@ -1836,7 +1926,7 @@ void TestVMU()
  	file_t fpd = fs_open("/vmu", O_DIR | O_RDONLY);
 	if (!fpd)
 		return;
-	dirent_t* dirinfo;
+	const dirent_t* dirinfo;
 	while ((dirinfo = fs_readdir(fpd)))
 		vmu_menu.AddItem(dirinfo->name, NULL);
 	vmu_menu.Run();
@@ -2170,7 +2260,7 @@ void CheckSingleGame()
 	if (!fpd)
 		return;
 	checking_single = true;
-	dirent_t* dirinfo;
+	const dirent_t* dirinfo;
 	while ((dirinfo = fs_readdir(fpd)))
 	{
 		if (stricmp(dirinfo->name, "game.zip") == 0 ||
@@ -2210,6 +2300,7 @@ void CheckSingleGame()
 void InitDefaultSettings()
 {
 	ZeroMemory (&Settings, sizeof (Settings));
+	Settings.Stereo = TRUE;
 	
 	Settings.SoundSkipMethod = 0; // uint8  INTERESTING!
 	Settings.H_Max = SNES_CYCLES_PER_SCANLINE; // long   
@@ -2315,7 +2406,7 @@ extern "C" int main()
 				memset(sound_buf, 0, SFCAST_SOUND_BUF_SIZE);
 				first_sfcastGetSound = true;
 				scherzo_snd_stream_init(sfcastGetSound);
-				scherzo_snd_stream_start(g_soundModes[g_sound_mode], 1);
+				scherzo_snd_stream_start(g_soundModes[g_sound_mode], Settings.Stereo ? 1 : 0);
 			}
 		}
     	S9xMainLoop();

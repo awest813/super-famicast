@@ -21,7 +21,7 @@
 
 #include "aica_cmd_iface.h"
 
-CVSID("$Id: snd_stream.c,v 1.13 2003/03/09 01:26:37 bardtx Exp $");
+/* CVSID removed — not available in KOS 2.x */
 
 /*
 

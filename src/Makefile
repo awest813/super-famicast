@@ -16,9 +16,10 @@ MY_AFLAGS = -Wa,-little -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN
 
 OBJS += $(ASM_CPU_OBJS)
 
-KOS_EXTRA_FLAGS = -D_XBOX -DUNZIP_SUPPORT -DNOASM -DSDD1_DECOMP -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN -funroll-loops 
-KOS_CFLAGS += $(KOS_EXTRA_FLAGS)
-KOS_CPPFLAGS += $(KOS_EXTRA_FLAGS)
+KOS_EXTRA_FLAGS = -D_XBOX -DUNZIP_SUPPORT -DNOASM -DSDD1_DECOMP -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN
+KOS_OPTIMIZATION_FLAGS = -Ofast -ffast-math -fomit-frame-pointer -fno-exceptions -fno-rtti -mrelax -m4-single-only -fstrict-aliasing -falign-functions=4 -falign-loops=4 -falign-labels=4 -falign-jumps=4
+KOS_CFLAGS += $(KOS_EXTRA_FLAGS) $(KOS_OPTIMIZATION_FLAGS)
+KOS_CPPFLAGS += $(KOS_EXTRA_FLAGS) $(KOS_OPTIMIZATION_FLAGS)
 
 all: rm-elf $(TARGET)
 
@@ -34,8 +35,9 @@ rm-elf:
 	-rm -f $(TARGET) $(BIN) romdisk.*
 
 $(TARGET): $(OBJS) romdisk.o
-	$(KOS_CC) $(KOS_STARTUP) $(OBJS) romdisk.o -o $(TARGET) $(KOS_LDFLAGS) $(KOS_LIBS) -lmp3 -loggvorbisplay -lparallax -lkmg -lpng -ljpeg -lgl -lm -lkallisti -lz -lm -lgcc -lk++ -lkosutils
+	$(KOS_CC) $(KOS_STARTUP) $(OBJS) romdisk.o -o $(TARGET) $(KOS_LDFLAGS) -lparallax -lkmg -lpng -ljpeg -lstdc++ -lsupc++ -lmp3 -loggvorbisplay -lvorbis -logg -lz $(KOS_LIBS)
 	$(KOS_STRIP) $(TARGET)
+	mkdir -p bin
 	$(KOS_OBJCOPY) -O binary $(TARGET) bin/raw.bin
 	scramble bin/raw.bin bin/1ST_READ.BIN
 	cp bin/1ST_READ.BIN cd/1ST_READ.BIN

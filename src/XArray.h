@@ -1,6 +1,8 @@
 #if !defined(AFX_XARRAY_H__D03AF296_9FA8_499F_A47D_155DDACDA5CC__INCLUDED_)
 #define AFX_XARRAY_H__D03AF296_9FA8_499F_A47D_155DDACDA5CC__INCLUDED_
 
+#include <string.h>
+
 template<class _mytype>
 class XArray  
 {

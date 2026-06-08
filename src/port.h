@@ -158,18 +158,7 @@ typedef unsigned char bool8;
 //typedef unsigned long bool8;
 
 #ifndef __WIN32__
-/* SCHERZO
-typedef unsigned char uint8;
-typedef unsigned short uint16;
-typedef signed char int8;
-typedef short int16;
-typedef int int32;
-typedef unsigned int uint32;
-*/
-#ifdef __GNUC__  /* long long is not part of ISO C++ */
-__extension__
-#endif
-//typedef long long int64;
+#include <kos.h>
 #else /* __WIN32__ */
 
 #ifdef __BORLANDC__
@@ -241,9 +230,10 @@ void _makepath (char *path, const char *drive, const char *dir,
 		const char *fname, const char *ext);
 void _splitpath (const char *path, char *drive, char *dir, char *fname,
 		 char *ext);
-//SCHERZO ADDED THIS
-#define strcasecmp stricmp
-#define strncasecmp strnicmp
+//SCHERZO ADDED THIS — on KOS/POSIX strcasecmp is native; provide Windows-style aliases
+#include <strings.h>
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
 
 #else /* __WIN32__ */
 #define strcasecmp stricmp
