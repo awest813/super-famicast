@@ -1,4 +1,5 @@
 #include "dc_file_browser.h"
+#include "dc_utils.h"
 #include <strings.h>
 #ifndef stricmp
 #define stricmp strcasecmp
@@ -53,8 +54,10 @@ bool DCFileBrowser::Browse(bool use_last)
 					if (m_folder_icon)
 						itemtemp->SetIcon(m_folder_icon);
 				}
-				else
+				else if (dc_is_rom_extension(dirinfo->name))
 					itemtemp = m_menu.AddItem(dirinfo->name, DCFileBrowser::OnChooseFile);
+				else
+					continue;
 				dotpos = strrchr(dirinfo->name, '.');
 				if (dotpos)
 				{

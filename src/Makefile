@@ -2,11 +2,12 @@
 # by Scherzo
 
 BUILD_PROFILE ?= release
+ENABLE_NETPLAY ?= 0
 
 TARGET = superfamicast.elf
 OBJS =  utils.o main.o 2xsai.o apu.o apudebug.o c4.o c4emu.o cheats2.o clip.o cpu.o data.o debug.o dma.o 
-OBJS += dsp1.o fxdbg.o fxemu.o fxinst.o gfx.o globals.o loadzip.o memmap.o netplay.o obc1.o ppu.o screenshot.o 
-OBJS += sdd1.o sdd1emu.o server.o seta010.o seta011.o seta018.o seta.o snaporig.o snapshot.o snes9x.o soundux.o spc700.o 
+OBJS += dsp1.o fxdbg.o fxemu.o fxinst.o gfx.o globals.o loadzip.o memmap.o obc1.o ppu.o screenshot.o 
+OBJS += sdd1.o sdd1emu.o seta010.o seta011.o seta018.o seta.o snaporig.o snapshot.o snes9x.o soundux.o spc700.o 
 OBJS += spc7110.o spc.o spccycles.o srtc.o tile.o explode.o unreduce.o unshrink.o unzip.o cheats.o scanf.o dc_utils.o 
 OBJS += dc_vmu.o XML.o dc_menu.o pvr_texture.o dc_controller.o dc_mouse.o dc_file_browser.o test.o sa1.o scherzo_snd_stream.o 
 OBJS += offsets.o sfcast_profile.o sfcast_accuracy.o
@@ -27,7 +28,14 @@ MY_AFLAGS = -Wa,-little -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN
 
 OBJS += $(ASM_CPU_OBJS) $(SA1_CPU_OBJ)
 
+ifeq ($(ENABLE_NETPLAY),1)
+OBJS += netplay.o server.o
+endif
+
 KOS_EXTRA_FLAGS = -D_XBOX -DUNZIP_SUPPORT -DNOASM -DSDD1_DECOMP -DSPC700_C -DVAR_CYCLES -DCPU_SHUTDOWN -DSPC700_SHUTDOWN
+ifeq ($(ENABLE_NETPLAY),1)
+KOS_EXTRA_FLAGS += -DNETPLAY_SUPPORT
+endif
 KOS_COMMON_FLAGS = -mrelax -m4-single-only -fno-exceptions -fno-strict-aliasing
 
 ifeq ($(wildcard $(KOS_PORTS)/include/plx/font.h),)

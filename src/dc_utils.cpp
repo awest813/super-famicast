@@ -1,5 +1,6 @@
 #include <kos.h>
 #include <stdio.h>
+#include <strings.h>
 #include "dc_utils.h"
 #include "dc_vmu.h"
 #include "dc_menu.h"
@@ -41,6 +42,10 @@ void dc_maple_init ()
 	{
 		dev = maple_enum_type (n, MAPLE_FUNC_CONTROLLER);
 		p->dev = dev;
+
+		if (!dev)
+			break;
+
 		p->type.c_type = DC_MAPLE_CONTROLLER_NORMAL;
 
 		tp = typemap;
@@ -57,9 +62,6 @@ void dc_maple_init ()
 
 		++n;
 		++p;
-
-		if (!dev)
-			break;
 	}
 
 	// mouse
@@ -96,6 +98,17 @@ void dc_maple_init ()
 }
 
 
+bool dc_is_rom_extension(const char* filename)
+{
+	const char* dotpos = strrchr(filename, '.');
+	if (!dotpos)
+		return false;
+	return strcasecmp(dotpos, ".sfc") == 0 ||
+	       strcasecmp(dotpos, ".smc") == 0 ||
+	       strcasecmp(dotpos, ".fig") == 0 ||
+	       strcasecmp(dotpos, ".swc") == 0;
+}
+
 /* ------------------------------------------------------------ */
 /* screen rect */
 
@@ -131,8 +144,7 @@ int load_bmp (uint16** pRaw, const char *filename, uint32* width, uint32* height
 	area = (*width) * (*height);
 	bmp_size = area * 3;
 	bmp = new uint8[bmp_size];
-	//raw = *pRaw = new uint16[area];
-	raw = *pRaw = (uint16*) memalign(32, bmp_size);
+	raw = *pRaw = (uint16*) memalign(32, area * sizeof(uint16));
 
 	fseek(fp, 54, SEEK_SET);
 	if (fread(bmp, bmp_size, 1, fp) != 1) 
@@ -311,8 +323,6 @@ bool scherzo_bmp_load_texture(const char* filename, pvr_ptr_t* tex, uint32 *w, u
 		++h_count;
 	*tex_width = (int32) powf(2, w_count);
 	*tex_height = (int32) powf(2, h_count);
-	printf("w = %i, h = %i\n", *w, *h);
-	printf("tex_width = %i, tex_height = %i\n", *tex_width, *tex_height);
 	uint16 tex_byte_size = sizeof(uint16) * (*tex_width) * (*tex_height);
 	*tex = pvr_mem_malloc(tex_byte_size);
 	
@@ -334,7 +344,7 @@ char* read_text_file(const char* filename)
 	fseek(fp, 0, SEEK_SET);
 	char* sztemp = new char[filelen + 1];
 	fread(sztemp, sizeof(char), filelen, fp);
-	sztemp[filelen] = NULL;
+	sztemp[filelen] = '\0';
 	fclose(fp);
 	return sztemp;
 }

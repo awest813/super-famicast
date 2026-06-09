@@ -2177,7 +2177,10 @@ Op58:
 	mov.b IRQActive,r0
 	tst r0,r0
 	bt .CLI_EXIT
-	/* XXX: test for Settings.DisableIRQ */
+	mov.l Settings,r1
+	mov.b DisableIRQ,r0
+	tst r0,r0
+	bt .CLI_EXIT
 	mov.l S9xOpcode_IRQ,r3
 	and r2,FLAGS
 	Xlink

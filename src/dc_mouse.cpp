@@ -16,6 +16,8 @@ DCMouse::~DCMouse()
 
 void DCMouse::Poll()
 {
+	if (!m_dev)
+		return;
 	m_old_state = m_state;
 	m_state = *((mouse_state_t*) maple_dev_status (m_dev));
 }
