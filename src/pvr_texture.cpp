@@ -61,7 +61,7 @@ int CPVRTexture::LoadBMP(const char* filename, pvr_list_t list, int filtering)
     }
 	m_tex_width = (int32) powf(2, w_count);
 	m_tex_height = (int32) powf(2, h_count);
-	uint16 tex_byte_size = sizeof(uint16) * m_tex_width * m_tex_height;
+	uint32 tex_byte_size = sizeof(uint16) * m_tex_width * m_tex_height;
 	if (!m_ptr)
 	{
 		pvr_poly_cxt_t poly;

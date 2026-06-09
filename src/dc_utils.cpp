@@ -323,7 +323,7 @@ bool scherzo_bmp_load_texture(const char* filename, pvr_ptr_t* tex, uint32 *w, u
 		++h_count;
 	*tex_width = (int32) powf(2, w_count);
 	*tex_height = (int32) powf(2, h_count);
-	uint16 tex_byte_size = sizeof(uint16) * (*tex_width) * (*tex_height);
+	uint32 tex_byte_size = sizeof(uint16) * (*tex_width) * (*tex_height);
 	*tex = pvr_mem_malloc(tex_byte_size);
 	
 	uint16* temp_dest = (uint16*) *tex;
