@@ -115,9 +115,6 @@ static void scherzo_process_filters(void **buffer, int *samplecnt) {
 /* Performs stereo seperation for the two channels; this routine
    has been optimized for the SH-4. */
 static void scherzo_sep_data(void *buffer, int len) {
-	int16	*bufsrc, *bufdst;
-	int	x, y, cnt;
-
 	if (stereo) {
 		uint32 *bufsrc = (uint32*)buffer;
 		uint16 *bufdst0 = (uint16*)sep_buffer[0];
