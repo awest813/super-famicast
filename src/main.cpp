@@ -820,7 +820,12 @@ void S9xCloseSnapshotFile( STREAM file)
 
 const char *S9xBasename (const char *f)
 {
-	return NULL;
+	if (!f)
+		return NULL;
+	const char *slash = strrchr(f, '/');
+	if (!slash)
+		slash = strrchr(f, '\\');
+	return slash ? slash + 1 : f;
 }
 
 void S9xExtraUsage ()
@@ -1195,8 +1200,18 @@ void OnReset(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 
 void OnSaveSRAM(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
+	char vmu_path[0x100];
+	if (!FindFirstVMU(vmu_path))
+	{
+		ShowMsg("No VMU found to save SRAM");
+		return;
+	}
 	if (FamicastSaveSRAM())
-		ShowMsg("SRAM saved successully");
+	{
+		char msg[0x100];
+		sprintf(msg, "SRAM saved to VMU %s", vmu_path + 5);
+		ShowMsg(msg);
+	}
 	else
 		ShowMsg("Error saving SRAM");
 }

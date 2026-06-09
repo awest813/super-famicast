@@ -386,7 +386,10 @@ MainAsmLoop:
 	mov.b IRQActive,r0
 	tst r0,r0
 	bt .CLEAR_PENDING_IRQ_FLAG
-	/* XXX:	test for Settings.DisableIRQ */
+	mov.l Settings,r1
+	mov.b DisableIRQ,r0
+	tst r0,r0
+	bt .CLEAR_PENDING_IRQ_FLAG
 	mov #IRQ,r0
 	tst r0,FLAGS
 	bf .NO_PENDING_IRQ

@@ -135,8 +135,7 @@ int load_bmp (uint16** pRaw, const char *filename, uint32* width, uint32* height
 	area = (*width) * (*height);
 	bmp_size = area * 3;
 	bmp = new uint8[bmp_size];
-	//raw = *pRaw = new uint16[area];
-	raw = *pRaw = (uint16*) memalign(32, bmp_size);
+	raw = *pRaw = (uint16*) memalign(32, area * sizeof(uint16));
 
 	fseek(fp, 54, SEEK_SET);
 	if (fread(bmp, bmp_size, 1, fp) != 1) 
@@ -315,8 +314,6 @@ bool scherzo_bmp_load_texture(const char* filename, pvr_ptr_t* tex, uint32 *w, u
 		++h_count;
 	*tex_width = (int32) powf(2, w_count);
 	*tex_height = (int32) powf(2, h_count);
-	printf("w = %i, h = %i\n", *w, *h);
-	printf("tex_width = %i, tex_height = %i\n", *tex_width, *tex_height);
 	uint16 tex_byte_size = sizeof(uint16) * (*tex_width) * (*tex_height);
 	*tex = pvr_mem_malloc(tex_byte_size);
 	
@@ -338,7 +335,7 @@ char* read_text_file(const char* filename)
 	fseek(fp, 0, SEEK_SET);
 	char* sztemp = new char[filelen + 1];
 	fread(sztemp, sizeof(char), filelen, fp);
-	sztemp[filelen] = NULL;
+	sztemp[filelen] = '\0';
 	fclose(fp);
 	return sztemp;
 }
