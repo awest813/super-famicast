@@ -150,6 +150,8 @@ struct SSuperFamicastSettings
 	//VERSION 2
 	bool stereo_sound;
 	char save_vmu[32];
+	//VERSION 3
+	uint32 max_auto_frameskip;
 };
 
 char chosen_vmu[32] = "";
@@ -263,7 +265,7 @@ void SaveSettings()
 	
 	SSuperFamicastSettings out_settings;
 	memset(&out_settings, 0, sizeof(SSuperFamicastSettings));
-	out_settings.version = 2;
+	out_settings.version = 3;
 	out_settings.screen_x1 = screen_adjustments.x1;
 	out_settings.screen_y1 = screen_adjustments.y1;
 	out_settings.screen_x2 = screen_adjustments.x2;
@@ -282,6 +284,7 @@ void SaveSettings()
 	out_settings.g_sound_mode = g_sound_mode;
 	out_settings.stereo_sound = Settings.Stereo;
 	strcpy(out_settings.save_vmu, chosen_vmu);
+	out_settings.max_auto_frameskip = Settings.AutoMaxSkipFrames;
 	
 	fwrite(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
 	fclose(fp);
@@ -291,60 +294,87 @@ void SaveSettings()
 	ShowMsg(msg);
 }
 
-void LoadSettings()
+static bool ApplySettingsFile(const char* cfg_path, const char* vmu_name, bool require_matching_slot)
 {
+	FILE* fp = fopen(cfg_path, "rb");
+	if (!fp)
+		return false;
+
+	SSuperFamicastSettings out_settings;
+	memset(&out_settings, 0, sizeof(SSuperFamicastSettings));
+
+	fread(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
+	fclose(fp);
+
+	if (out_settings.version < 1)
+		return false;
+
+	if (require_matching_slot && out_settings.version >= 2 &&
+	    out_settings.save_vmu[0] != '\0' && vmu_name &&
+	    strcmp(out_settings.save_vmu, vmu_name) != 0)
+		return false;
+
+	screen_adjustments.x1 = out_settings.screen_x1;
+	screen_adjustments.y1 = out_settings.screen_y1;
+	screen_adjustments.x2 = out_settings.screen_x2;
+	screen_adjustments.y2 = out_settings.screen_y2;
+	screen_adjustments.xscale = out_settings.screen_xscale;
+	screen_adjustments.yscale = out_settings.screen_yscale;
+	bilinear_filtering = out_settings.bilinear_filtering;
+	use_analog[0] = out_settings.use_analog[0];
+	use_analog[1] = out_settings.use_analog[1];
+	use_analog[2] = out_settings.use_analog[2];
+	use_analog[3] = out_settings.use_analog[3];
+	Settings.SkipFrames = out_settings.SkipFrames;
+	Settings.DisplayFrameRate = out_settings.DisplayFrameRate;
+	auto_save_sram = out_settings.auto_save_sram;
+	strcpy(theme_dir, out_settings.theme_dir);
+	g_sound_mode = out_settings.g_sound_mode;
+
+	if (out_settings.version >= 2)
+	{
+		Settings.Stereo = out_settings.stereo_sound;
+		strcpy(chosen_vmu, out_settings.save_vmu);
+	}
+	else
+	{
+		Settings.Stereo = TRUE;
+		chosen_vmu[0] = '\0';
+	}
+
+	if (out_settings.version >= 3)
+		Settings.AutoMaxSkipFrames = out_settings.max_auto_frameskip;
+	else
+		Settings.AutoMaxSkipFrames = 10;
+
+	return true;
+}
+
+static bool LoadSettingsFromVMUs(bool require_matching_slot)
+{
+	char ctemp[0x100];
 	file_t fpd = fs_open("/vmu", O_DIR | O_RDONLY);
 	if (!fpd)
-		return;
+		return false;
 	const dirent_t* dirinfo;
 	bool loaded = false;
 	while ((dirinfo = fs_readdir(fpd)))
 	{
-		char ctemp[0x100];
 		sprintf(ctemp, "/vmu/%s/sfcast01.cfg", dirinfo->name);
-		FILE* fp = fopen(ctemp, "rb");
-		if (!fp)
-			continue;
-		
-		SSuperFamicastSettings out_settings;
-		memset(&out_settings, 0, sizeof(SSuperFamicastSettings));
-		
-		fread(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
-		fclose(fp);
-		
-		if (out_settings.version >= 1)
+		if (ApplySettingsFile(ctemp, dirinfo->name, require_matching_slot))
 		{
-			screen_adjustments.x1 = out_settings.screen_x1;
-			screen_adjustments.y1 = out_settings.screen_y1;
-			screen_adjustments.x2 = out_settings.screen_x2;
-			screen_adjustments.y2 = out_settings.screen_y2;
-			screen_adjustments.xscale = out_settings.screen_xscale;
-			screen_adjustments.yscale = out_settings.screen_yscale;
-			bilinear_filtering = out_settings.bilinear_filtering;
-			use_analog[0] = out_settings.use_analog[0];
-			use_analog[1] = out_settings.use_analog[1];
-			use_analog[2] = out_settings.use_analog[2];
-			use_analog[3] = out_settings.use_analog[3];
-			Settings.SkipFrames = out_settings.SkipFrames;
-			Settings.DisplayFrameRate = out_settings.DisplayFrameRate;
-			auto_save_sram = out_settings.auto_save_sram;
-			strcpy(theme_dir, out_settings.theme_dir);
-			g_sound_mode = out_settings.g_sound_mode;
+			loaded = true;
+			break;
 		}
-		if (out_settings.version >= 2)
-		{
-			Settings.Stereo = out_settings.stereo_sound;
-			strcpy(chosen_vmu, out_settings.save_vmu);
-		}
-		else
-		{
-			Settings.Stereo = TRUE;
-			chosen_vmu[0] = '\0';
-		}
-		loaded = true;
-		break;
 	}
 	fs_close(fpd);
+	return loaded;
+}
+
+void LoadSettings()
+{
+	if (!LoadSettingsFromVMUs(true))
+		LoadSettingsFromVMUs(false);
 }
 
 static pvr_init_params_t pvr_params = 
@@ -548,14 +578,33 @@ void _makepath (char *path, const char *, const char *dir, const char *fname, co
     }
 }
 
+static bool BuildRomSidecarPath(const char *extension, char *out_path)
+{
+	const char *base = rom_filename[0] != '\0' ? rom_filename : Memory.ROMFilename;
+	if (!base || !base[0])
+		return false;
+
+	char dir[_MAX_PATH];
+	char fname[_MAX_FNAME];
+	char ext[_MAX_EXT];
+	_splitpath(base, NULL, dir, fname, ext);
+	if (extension && extension[0] == '.')
+		extension++;
+	_makepath(out_path, NULL, dir, fname, extension);
+	return true;
+}
+
 const char *S9xGetFilename (const char *e)
 {
-	return NULL;
+	static char filename[_MAX_PATH];
+	if (!BuildRomSidecarPath(e, filename))
+		return NULL;
+	return filename;
 }
 
 extern "C" const char *S9xGetFilenameInc (const char *e)
 {
-	return NULL;
+	return S9xGetFilename(e);
 }
 
 extern "C" void S9xSyncSpeed(void)
@@ -588,7 +637,7 @@ extern "C" void S9xSyncSpeed(void)
     	}
     	else
 		{
-			if (IPPU.SkippedFrames < 10)
+			if (IPPU.SkippedFrames < Settings.AutoMaxSkipFrames)
 			{
 				IPPU.SkippedFrames++;
 				IPPU.RenderThisFrame = FALSE;
@@ -722,10 +771,8 @@ extern "C" bool8 S9xReadMousePosition(int which, int &x, int &y, uint32 &buttons
 		g_mouse_y = 0;
 	else if (g_mouse_y > 223)
 		g_mouse_y = 223;
-	//x = g_mouse_x;
-	//y = g_mouse_y;
-	x = pMouse->GetDX();
-	y = pMouse->GetDY();
+	x = g_mouse_x;
+	y = g_mouse_y;
 	buttons = 0;
 	if (pMouse->IsPressed(MOUSE_LEFTBUTTON))
 		buttons |= 1;
@@ -1708,6 +1755,11 @@ void OnChangeFrameskip(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 		Settings.SkipFrames = value;
 }
 
+void OnChangeMaxAutoFrameskip(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
+{
+	Settings.AutoMaxSkipFrames = value;
+}
+
 void OnChangeDisplayFrameRate(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
 	Settings.DisplayFrameRate = value;
@@ -1744,13 +1796,19 @@ void OnOptions(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 	testchoice->AddChoice("Off", 0, !bilinear_filtering);
 	
 	testchoice = options_menu.AddItem("Frameskip", OnChangeFrameskip);
-	testchoice->AddChoice("Auto", -1, Settings.DisplayFrameRate == AUTO_FRAMERATE);
+	testchoice->AddChoice("Auto", -1, Settings.SkipFrames == AUTO_FRAMERATE);
 	testchoice->AddChoice("0", 1, Settings.SkipFrames == 1);
 	testchoice->AddChoice("1", 2, Settings.SkipFrames == 2);
 	testchoice->AddChoice("2", 3, Settings.SkipFrames == 3);
 	testchoice->AddChoice("3", 4, Settings.SkipFrames == 4);
 	testchoice->AddChoice("4", 5, Settings.SkipFrames == 5);
 	testchoice->AddChoice("5", 6, Settings.SkipFrames == 6);
+
+	testchoice = options_menu.AddItem("Max Auto Skip", OnChangeMaxAutoFrameskip);
+	testchoice->AddChoice("5", 5, Settings.AutoMaxSkipFrames == 5);
+	testchoice->AddChoice("10", 10, Settings.AutoMaxSkipFrames == 10);
+	testchoice->AddChoice("15", 15, Settings.AutoMaxSkipFrames == 15);
+	testchoice->AddChoice("20", 20, Settings.AutoMaxSkipFrames == 20);
 	
 	testchoice = options_menu.AddItem("Display Frame Rate", OnChangeDisplayFrameRate);
 	testchoice->AddChoice("On", TRUE, Settings.DisplayFrameRate == TRUE);
@@ -2340,6 +2398,7 @@ void InitDefaultSettings()
 	Settings.ApplyCheats = FALSE;
 	Settings.TurboMode = FALSE;
 	Settings.TurboSkipFrames = 15;
+	Settings.AutoMaxSkipFrames = 10;
     Settings.StretchScreenshots = 1;
 }
 

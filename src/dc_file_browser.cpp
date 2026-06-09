@@ -5,6 +5,17 @@
 #define strnicmp strncasecmp
 #endif
 
+static bool IsRomExtension(const char* filename)
+{
+	const char* dotpos = strrchr(filename, '.');
+	if (!dotpos)
+		return false;
+	return stricmp(dotpos, ".sfc") == 0 ||
+	       stricmp(dotpos, ".smc") == 0 ||
+	       stricmp(dotpos, ".fig") == 0 ||
+	       stricmp(dotpos, ".swc") == 0;
+}
+
 
 DCFileBrowser::DCFileBrowser()
 {
@@ -53,8 +64,10 @@ bool DCFileBrowser::Browse(bool use_last)
 					if (m_folder_icon)
 						itemtemp->SetIcon(m_folder_icon);
 				}
-				else
+				else if (IsRomExtension(dirinfo->name))
 					itemtemp = m_menu.AddItem(dirinfo->name, DCFileBrowser::OnChooseFile);
+				else
+					continue;
 				dotpos = strrchr(dirinfo->name, '.');
 				if (dotpos)
 				{

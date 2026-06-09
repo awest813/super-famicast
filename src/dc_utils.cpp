@@ -41,6 +41,10 @@ void dc_maple_init ()
 	{
 		dev = maple_enum_type (n, MAPLE_FUNC_CONTROLLER);
 		p->dev = dev;
+
+		if (!dev)
+			break;
+
 		p->type.c_type = DC_MAPLE_CONTROLLER_NORMAL;
 
 		tp = typemap;
