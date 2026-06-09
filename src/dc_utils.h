@@ -77,6 +77,7 @@ char* read_text_file(const char* filename);
 bool hexstr_to_uint32(const char* str, uint32* retval);
 void dc_sq_cpy(void *dest, void *src, int n);
 void dc_wait_sq_cpy_done();
+bool dc_is_rom_extension(const char* filename);
 
 #ifdef __cplusplus
 }

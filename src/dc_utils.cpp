@@ -1,5 +1,6 @@
 #include <kos.h>
 #include <stdio.h>
+#include <strings.h>
 #include "dc_utils.h"
 #include "dc_vmu.h"
 #include "dc_menu.h"
@@ -61,9 +62,6 @@ void dc_maple_init ()
 
 		++n;
 		++p;
-
-		if (!dev)
-			break;
 	}
 
 	// mouse
@@ -99,6 +97,17 @@ void dc_maple_init ()
 	}
 }
 
+
+bool dc_is_rom_extension(const char* filename)
+{
+	const char* dotpos = strrchr(filename, '.');
+	if (!dotpos)
+		return false;
+	return strcasecmp(dotpos, ".sfc") == 0 ||
+	       strcasecmp(dotpos, ".smc") == 0 ||
+	       strcasecmp(dotpos, ".fig") == 0 ||
+	       strcasecmp(dotpos, ".swc") == 0;
+}
 
 /* ------------------------------------------------------------ */
 /* screen rect */

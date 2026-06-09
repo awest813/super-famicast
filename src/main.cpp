@@ -156,6 +156,20 @@ struct SSuperFamicastSettings
 
 char chosen_vmu[32] = "";
 
+static uint32 NormalizeAutoMaxSkipFrames(uint32 value)
+{
+	if (value == 5 || value == 10 || value == 15 || value == 20)
+		return value;
+	return 10;
+}
+
+static uint8 NormalizeSoundMode(uint8 value)
+{
+	if (value > 7)
+		return 2;
+	return value;
+}
+
 bool music_is_playing = false;
 FILE* ogg_fp = NULL;
 OggVorbis_File vf;
@@ -286,9 +300,14 @@ void SaveSettings()
 	strcpy(out_settings.save_vmu, chosen_vmu);
 	out_settings.max_auto_frameskip = Settings.AutoMaxSkipFrames;
 	
-	fwrite(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
+	if (fwrite(&out_settings, sizeof(SSuperFamicastSettings), 1, fp) != 1)
+	{
+		fclose(fp);
+		ShowMsg("Error writing settings file");
+		return;
+	}
 	fclose(fp);
-	
+
 	char msg[0x100];
 	sprintf(msg, "Settings saved to VMU %s", vmu_path + 5); // strip "/vmu/"
 	ShowMsg(msg);
@@ -303,7 +322,11 @@ static bool ApplySettingsFile(const char* cfg_path, const char* vmu_name, bool r
 	SSuperFamicastSettings out_settings;
 	memset(&out_settings, 0, sizeof(SSuperFamicastSettings));
 
-	fread(&out_settings, sizeof(SSuperFamicastSettings), 1, fp);
+	if (fread(&out_settings, sizeof(SSuperFamicastSettings), 1, fp) != 1)
+	{
+		fclose(fp);
+		return false;
+	}
 	fclose(fp);
 
 	if (out_settings.version < 1)
@@ -328,13 +351,18 @@ static bool ApplySettingsFile(const char* cfg_path, const char* vmu_name, bool r
 	Settings.SkipFrames = out_settings.SkipFrames;
 	Settings.DisplayFrameRate = out_settings.DisplayFrameRate;
 	auto_save_sram = out_settings.auto_save_sram;
-	strcpy(theme_dir, out_settings.theme_dir);
-	g_sound_mode = out_settings.g_sound_mode;
+	out_settings.theme_dir[sizeof(out_settings.theme_dir) - 1] = '\0';
+	strncpy(theme_dir, out_settings.theme_dir, sizeof(theme_dir) - 1);
+	theme_dir[sizeof(theme_dir) - 1] = '\0';
+	g_sound_mode = NormalizeSoundMode(out_settings.g_sound_mode);
+	Settings.SoundPlaybackRate = g_sound_mode;
 
 	if (out_settings.version >= 2)
 	{
 		Settings.Stereo = out_settings.stereo_sound;
-		strcpy(chosen_vmu, out_settings.save_vmu);
+		out_settings.save_vmu[sizeof(out_settings.save_vmu) - 1] = '\0';
+		strncpy(chosen_vmu, out_settings.save_vmu, sizeof(chosen_vmu) - 1);
+		chosen_vmu[sizeof(chosen_vmu) - 1] = '\0';
 	}
 	else
 	{
@@ -343,7 +371,7 @@ static bool ApplySettingsFile(const char* cfg_path, const char* vmu_name, bool r
 	}
 
 	if (out_settings.version >= 3)
-		Settings.AutoMaxSkipFrames = out_settings.max_auto_frameskip;
+		Settings.AutoMaxSkipFrames = NormalizeAutoMaxSkipFrames(out_settings.max_auto_frameskip);
 	else
 		Settings.AutoMaxSkipFrames = 10;
 
@@ -707,23 +735,30 @@ extern "C" void S9xSetPalette(void)
 	
 }
 
-static bool FamicastSaveSRAM()
+// Returns 1 on success, 0 on save failure, -1 when no VMU is available.
+static int FamicastSaveSRAM(char* out_vmu_slot, size_t out_size)
 {
 	char vmu_path[0x100];
-	if (FindFirstVMU(vmu_path))
+	if (!FindFirstVMU(vmu_path))
+		return -1;
+
+	char ctemp[0x100];
+	sprintf(ctemp, "%s/%X.srm", vmu_path, Memory.ROMCRC32);
+	if (!Memory.SaveSRAM(ctemp))
+		return 0;
+
+	if (out_vmu_slot && out_size > 0)
 	{
-		char ctemp[0x100];
-		sprintf(ctemp, "%s/%X.srm", vmu_path, Memory.ROMCRC32);
-		if (Memory.SaveSRAM(ctemp))
-			return true;
+		strncpy(out_vmu_slot, vmu_path + 5, out_size - 1);
+		out_vmu_slot[out_size - 1] = '\0';
 	}
-	return false;
+	return 1;
 }
 
 extern "C" void S9xAutoSaveSRAM(void)
 {
 	if (auto_save_sram)
-		FamicastSaveSRAM();
+		FamicastSaveSRAM(NULL, 0);
 }
 
 extern "C" void S9xMessage(int, int, const char *str)
@@ -1200,20 +1235,18 @@ void OnReset(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 
 void OnSaveSRAM(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
-	char vmu_path[0x100];
-	if (!FindFirstVMU(vmu_path))
-	{
+	char vmu_slot[32];
+	int result = FamicastSaveSRAM(vmu_slot, sizeof(vmu_slot));
+	if (result < 0)
 		ShowMsg("No VMU found to save SRAM");
-		return;
-	}
-	if (FamicastSaveSRAM())
+	else if (result == 0)
+		ShowMsg("Error saving SRAM");
+	else
 	{
 		char msg[0x100];
-		sprintf(msg, "SRAM saved to VMU %s", vmu_path + 5);
+		sprintf(msg, "SRAM saved to VMU %s", vmu_slot);
 		ShowMsg(msg);
 	}
-	else
-		ShowMsg("Error saving SRAM");
 }
 /*
 int last_save_load_slot = 0;
@@ -1697,6 +1730,8 @@ void OnLoadGame(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
    		else
    		{
    			game_loaded = true;
+   			g_mouse_x = 0;
+   			g_mouse_y = 0;
    			char vmu_path[0x100];
 			if (FindFirstVMU(vmu_path))
 			{
@@ -1772,7 +1807,7 @@ void OnChangeFrameskip(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 
 void OnChangeMaxAutoFrameskip(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
-	Settings.AutoMaxSkipFrames = value;
+	Settings.AutoMaxSkipFrames = NormalizeAutoMaxSkipFrames(value);
 }
 
 void OnChangeDisplayFrameRate(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)

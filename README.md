@@ -96,9 +96,8 @@ use D-Pad-Left instead.
 
 Starts browsing for a ROM from the root of the CD or from where the last
 location browsed. Directories are displayed in a different color (defined by
-the theme) than that of files. All files are shown and are allowed to be
-chosen. Loading something other than a known ROM can possibly cause the
-emulator to crash. So please don't do it.
+the theme) than that of files. Only files with SNES ROM extensions (`.sfc`,
+`.smc`, `.fig`, `.swc`) are shown.
 
 You can swap the Super Famicast CD for another CD that has your ROMs. Do the
 swap before entering the ROM browser. Removing the CD stops the theme's music
@@ -113,16 +112,20 @@ less pixelated. It does not affect performance.
 
 ### Frameskip
 
-Auto - Tells the emulator to skip frames in order to acheive full speed
-emulation. However, there is a limit to the max frames to be dropped,
-which is now 10. So if your game hits about 5/60 fps, it might not be
-running full speed. The max frames allowed to be dropped might be
-configurable in a future release. Hopefully it won't be needed due to speed increases.
+Auto - Tells the emulator to skip frames in order to achieve full speed
+emulation. The maximum number of consecutive frames that can be dropped is
+configurable under **Max Auto Skip** (5, 10, 15, or 20; default 10). If your
+game hits about 5/60 fps with the cap at 10, it might not feel full speed.
 	
 0-5 - Draw every nth frame as fast as possible. For processing rich games,
 it can often produce smoother frame skipping than auto but full speed
 emulation is less likely. Experiment with your favorite game to find
 which pleases you most.
+
+### Max Auto Skip
+
+Sets the maximum number of consecutive frames Auto frameskip may drop (5, 10,
+15, or 20). This setting is saved to VMU with the rest of your options.
 
 ### Display Frame Rate
 
@@ -142,8 +145,8 @@ occurs do to this.
 Enables the SNES APU and produces sound output. This WILL slow down your
 game to just about an unplayable state AND it is out of sync. Future
 optimizations will hopefully free up enough CPU time to make sound a
-positive feature. Also note that if you enable of disable sound while
-a gmae is currently loaded, you will be forced to reset emulation.
+positive feature. Also note that if you enable or disable sound while
+a game is currently loaded, you will be forced to reset emulation.
 
 ### Adjust Screen
 
@@ -166,8 +169,8 @@ Saves all option settings, screen position, and currently selected theme to
 VMU. These settings are loaded automatically the next time you run Super
 Famicast.
 
-NOTE: Currently, all saves to VMU within Super Famicast are done to the first
-VMU found. Later versions will have more control of VMU saving and loading.
+Use **Save VMU Slot** in Options to choose which VMU receives saves. Settings
+are loaded from the VMU slot recorded in the config when possible.
 
 ## Change Theme
 

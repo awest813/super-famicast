@@ -84,6 +84,12 @@ make clean
 make USE_SA1_ASM=0
 ```
 
+Netplay/server code is excluded from the default Dreamcast build. To include it:
+
+```sh
+make ENABLE_NETPLAY=1
+```
+
 To produce `data.iso` from the `src/cd` tree:
 
 ```sh
