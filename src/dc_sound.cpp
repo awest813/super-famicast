@@ -32,20 +32,29 @@ dc_sound_init (int sample_rate, int sample_bits, int buffer_len)
 	*buf_len = buffer_len;
 	g2_fifo_wait ();
 
-	for (;;)
+	// Bound the firmware handshake (~5 s); a bad upload must not hang the console.
+	int spins;
+	for (spins = 0; spins < 50; ++spins)
 	{
 		if (*init_done) break;
 		timer_spin_sleep (100);
+	}
+	if (!*init_done)
+	{
+		dbglog (DBG_ERROR, "dc_sound_init: AICA firmware init timed out, continuing without sound\n");
+		return;
 	}
 
 	*start = true;
 	g2_fifo_wait ();
 
-	for (;;)
+	for (spins = 0; spins < 50; ++spins)
 	{
 		if (*play_start) break;
 		timer_spin_sleep (100);
 	}
+	if (!*play_start)
+		dbglog (DBG_ERROR, "dc_sound_init: AICA playback start timed out, continuing without sound\n");
 }
 
 

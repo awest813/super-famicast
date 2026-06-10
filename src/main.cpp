@@ -424,7 +424,12 @@ static void texture_init ()
 	for (i = 0; i < SNES_TEXTURE_ADDRS_SIZE; ++i) 
 	{
 		addr = pvr_mem_malloc (256 * 256 * 2);
-		snes_texture_addrs[i] = addr; 
+		if (!addr)
+		{
+			printf ("Cannot allocate PVR memory for screen textures.\n");
+			exit (1);
+		}
+		snes_texture_addrs[i] = addr;
 		pvr_poly_cxt_txr (&poly, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED, 256, 256, addr, PVR_FILTER_NONE);
 		pvr_poly_compile (snes_pvr_poly_headers_filter_none + i, &poly);
 		pvr_poly_cxt_txr (&poly, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED, 256, 256, addr, PVR_FILTER_BILINEAR);
@@ -639,17 +644,13 @@ extern "C" void S9xSyncSpeed(void)
 {
     if (!Settings.TurboMode && Settings.SkipFrames == AUTO_FRAMERATE)
     {
-	    static struct timeval next1 = {0, 0};
-	    struct timeval now;
+	    static uint64 next_frame_us = 0;
+	    uint64 now = timer_us_gettime64 ();
 
-	    while (gettimeofday (&now, NULL) < 0) ;
-		if (next1.tv_sec == 0)
-		{
-		  	next1 = now;
-		   	next1.tv_usec++;
-	    }
+		if (next_frame_us == 0)
+			next_frame_us = now + 1;
 
-	    if (timercmp(&next1, &now, >))
+	    if (next_frame_us > now)
 	    {
 	    	if (IPPU.SkippedFrames == 0)
 	    	{
@@ -657,8 +658,8 @@ extern "C" void S9xSyncSpeed(void)
 	    		{
 	    			CHECK_SOUND ();
 	    		    S9xProcessEvents (FALSE);
-	    		    while (gettimeofday (&now, NULL) < 0) ;
-  		        } while (timercmp(&next1, &now, >));
+	    		    now = timer_us_gettime64 ();
+  		        } while (next_frame_us > now);
  		    }
 	     	IPPU.RenderThisFrame = TRUE;
 	    	IPPU.SkippedFrames = 0;
@@ -674,15 +675,10 @@ extern "C" void S9xSyncSpeed(void)
 			{
 				IPPU.RenderThisFrame = TRUE;
 				IPPU.SkippedFrames = 0;
-				next1 = now;
+				next_frame_us = now;
 			}
 		}
-		next1.tv_usec += Settings.FrameTime;
-		if (next1.tv_usec >= 1000000)
-		{
-			next1.tv_sec += next1.tv_usec / 1000000;
-			next1.tv_usec %= 1000000;
-		}
+		next_frame_us += Settings.FrameTime;
     }
     else
     {

@@ -368,7 +368,6 @@ bool8 CMemory::Init ()
     ROM     = (uint8 *) memalign(32, MAX_ROM_SIZE + 0x200 + 0x8000);
     
 	BSRAM	= (uint8 *) memalign(32, 0x80000);
-	memset (BSRAM, 0, 0x80000);
 
 	FillRAM = NULL;
 	
@@ -388,7 +387,9 @@ bool8 CMemory::Init ()
 		Deinit ();
 		return (FALSE);
     }
-	
+
+	memset (BSRAM, 0, 0x80000);
+
     // FillRAM uses first 32K of ROM image area, otherwise space just
     // wasted. Might be read by the SuperFX code.
 	

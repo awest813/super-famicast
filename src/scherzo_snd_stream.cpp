@@ -86,6 +86,10 @@ void scherzo_snd_stream_filter_add(snd_stream_filter_t filtfunc, void * obj) {
 	filter_t * f;
 
 	f = (filter_t*) malloc(sizeof(filter_t));
+	if (!f) {
+		dbglog(DBG_ERROR, "snd_stream_filter_add(): out of memory, filter not added\n");
+		return;
+	}
 	f->func = filtfunc;
 	f->data = obj;
 	TAILQ_INSERT_TAIL(&filters, f, lent);
@@ -185,6 +189,12 @@ int scherzo_snd_stream_init(void* (*callback)(int, int *)) {
 		sep_buffer[0] = (int16*) memalign(32, (BUFFER_SIZE/2));
 		sep_buffer[1] = (int16*) memalign(32, (BUFFER_SIZE/2));
 	}
+	if (!sep_buffer[0] || !sep_buffer[1]) {
+		dbglog(DBG_ERROR, "snd_stream_init(): out of memory for separation buffers\n");
+		if (sep_buffer[0]) { free(sep_buffer[0]); sep_buffer[0] = NULL; }
+		if (sep_buffer[1]) { free(sep_buffer[1]); sep_buffer[1] = NULL; }
+		return -1;
+	}
 
 	/* Finish loading the stream driver */
 	if (snd_init() < 0) {
@@ -193,6 +203,10 @@ int scherzo_snd_stream_init(void* (*callback)(int, int *)) {
 	}
 
 	spu_ram_sch1 = snd_mem_malloc(BUFFER_SIZE*2);
+	if (!spu_ram_sch1) {
+		dbglog(DBG_ERROR, "snd_stream_init(): out of SPU memory for stream buffers\n");
+		return -1;
+	}
 	spu_ram_sch2 = spu_ram_sch1 + BUFFER_SIZE;
 
 	initted = 1;
