@@ -12,6 +12,8 @@ void SfcastProfileRenderStart();
 void SfcastProfileRenderEnd();
 void SfcastProfileDisplayStart();
 void SfcastProfileDisplayEnd();
+void SfcastProfileSoundStart();
+void SfcastProfileSoundEnd();
 
 #else
 
@@ -22,6 +24,8 @@ static inline void SfcastProfileRenderStart() {}
 static inline void SfcastProfileRenderEnd() {}
 static inline void SfcastProfileDisplayStart() {}
 static inline void SfcastProfileDisplayEnd() {}
+static inline void SfcastProfileSoundStart() {}
+static inline void SfcastProfileSoundEnd() {}
 
 #endif
 

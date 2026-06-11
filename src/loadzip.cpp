@@ -178,7 +178,16 @@ bool8 LoadZip(const char* zipname,
 
     do
     {
-	assert(info.uncompressed_size <= CMemory::MAX_ROM_SIZE + 512);
+	// Bound every part (not just the first) against the remaining ROM
+	// buffer; an oversized or crafted multi-part zip must fail cleanly
+	// instead of overflowing the heap.
+	uint32 rom_space_left = CMemory::MAX_ROM_SIZE + 0x200 - (uint32) (ptr - Memory.ROM);
+	if (info.uncompressed_size > rom_space_left)
+	{
+	    unzCloseCurrentFile(file);
+	    unzClose(file);
+	    return (FALSE);
+	}
 	int FileSize = info.uncompressed_size;
 	
 	int calc_size = FileSize / 0x2000;

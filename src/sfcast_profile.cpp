@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
-#include <sys/time.h>
+#include <arch/timer.h>
 
 static unsigned long long profile_frame_start_us;
 static unsigned long long profile_cpu_start_us;
@@ -12,18 +12,19 @@ static unsigned long long profile_render_start_us;
 static unsigned long long profile_display_start_us;
 static unsigned long long profile_window_start_us;
 
+static unsigned long long profile_sound_start_us;
+
 static unsigned long long profile_cpu_total_us;
 static unsigned long long profile_render_total_us;
 static unsigned long long profile_display_total_us;
+static unsigned long long profile_sound_total_us;
 static uint32 profile_frames;
 static uint32 profile_rendered_frames;
 static uint32 profile_skipped_frames;
 
 static unsigned long long SfcastProfileNowUs()
 {
-	struct timeval now;
-	while (gettimeofday(&now, NULL) < 0) {}
-	return ((unsigned long long) now.tv_sec * 1000000ULL) + (unsigned long long) now.tv_usec;
+	return (unsigned long long) timer_us_gettime64();
 }
 
 void SfcastProfileFrameStart()
@@ -57,19 +58,22 @@ void SfcastProfileFrameEnd(bool8 rendered, uint32 skipped_frames)
 		uint32 avg_cpu = profile_frames ? (uint32) (profile_cpu_total_us / profile_frames) : 0;
 		uint32 avg_render = profile_rendered_frames ? (uint32) (profile_render_total_us / profile_rendered_frames) : 0;
 		uint32 avg_display = profile_rendered_frames ? (uint32) (profile_display_total_us / profile_rendered_frames) : 0;
+		uint32 avg_sound = profile_frames ? (uint32) (profile_sound_total_us / profile_frames) : 0;
 
-		printf("SFCAST_PROFILE frames=%lu rendered=%lu skipped=%lu cpu_us=%lu render_us=%lu display_us=%lu\n",
+		printf("SFCAST_PROFILE frames=%lu rendered=%lu skipped=%lu cpu_us=%lu render_us=%lu display_us=%lu sound_us=%lu\n",
 			(unsigned long) profile_frames,
 			(unsigned long) profile_rendered_frames,
 			(unsigned long) profile_skipped_frames,
 			(unsigned long) avg_cpu,
 			(unsigned long) avg_render,
-			(unsigned long) avg_display);
+			(unsigned long) avg_display,
+			(unsigned long) avg_sound);
 
 		profile_window_start_us = now;
 		profile_cpu_total_us = 0;
 		profile_render_total_us = 0;
 		profile_display_total_us = 0;
+		profile_sound_total_us = 0;
 		profile_frames = 0;
 		profile_rendered_frames = 0;
 		profile_skipped_frames = 0;
@@ -100,6 +104,19 @@ void SfcastProfileDisplayEnd()
 	if (profile_display_start_us)
 		profile_display_total_us += now - profile_display_start_us;
 	profile_display_start_us = 0;
+}
+
+void SfcastProfileSoundStart()
+{
+	profile_sound_start_us = SfcastProfileNowUs();
+}
+
+void SfcastProfileSoundEnd()
+{
+	unsigned long long now = SfcastProfileNowUs();
+	if (profile_sound_start_us)
+		profile_sound_total_us += now - profile_sound_start_us;
+	profile_sound_start_us = 0;
 }
 
 #endif

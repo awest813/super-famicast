@@ -13,6 +13,8 @@ the DreamSNES team. A huge thanks to them!
 
 * [Super Plan](SUPER_PLAN.md) - combined roadmap for accuracy, performance,
   Dreamcast-specific optimization, sound sync, compatibility, and releases.
+* [Speed And Stability Plan](SPEED_STABILITY_PLAN.md) - ordered execution
+  plan for performance and crash-resistance work, with per-item status.
 * [Building](BUILDING.md) - KOS/SH-ELF build setup, current build shape, and
   verified local DreamSDK commands.
 * [Baseline Manifest](BASELINE_MANIFEST.md) - Phase 0 artifact sizes, hashes,

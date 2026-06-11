@@ -368,7 +368,6 @@ bool8 CMemory::Init ()
     ROM     = (uint8 *) memalign(32, MAX_ROM_SIZE + 0x200 + 0x8000);
     
 	BSRAM	= (uint8 *) memalign(32, 0x80000);
-	memset (BSRAM, 0, 0x80000);
 
 	FillRAM = NULL;
 	
@@ -388,7 +387,9 @@ bool8 CMemory::Init ()
 		Deinit ();
 		return (FALSE);
     }
-	
+
+	memset (BSRAM, 0, 0x80000);
+
     // FillRAM uses first 32K of ROM image area, otherwise space just
     // wasted. Might be read by the SuperFX code.
 	
@@ -1480,7 +1481,9 @@ void CMemory::InitROM (bool8 Interleaved)
 		SRAMMask = Memory.SRAMSize ?
 			((1 << (Memory.SRAMSize + 3)) * 128) - 1 : 0;
 	}
-	if((ROMChecksum + ROMComplementChecksum != 0xffff) || ROMChecksum != CalculatedChecksum || ((uint32)CalculatedSize > (uint32)(((1<<(ROMSize-7))*128)*1024)))
+	if((ROMChecksum + ROMComplementChecksum != 0xffff) || ROMChecksum != CalculatedChecksum ||
+		ROMSize < 7 || ROMSize > 20 ||
+		((uint32)CalculatedSize > (uint32)(((1<<(ROMSize-7))*128)*1024)))
 	{
 		if(Settings.DisplayColor==0xffff || Settings.DisplayColor!=BUILD_PIXEL(31,0,0))
 		{
@@ -2267,6 +2270,8 @@ void DetectSuperFxRamSize()
 	if(ROM[0x7FDA]==0x33)
 	{
 		Memory.SRAMSize=ROM[0x7FBD];
+		if (Memory.SRAMSize > 7)
+			Memory.SRAMSize = 7;
 	}
 	else
 	{
@@ -3858,6 +3863,11 @@ int check_char(unsigned c)
 void CMemory::ParseSNESHeader(uint8* RomHeader)
 {
 		Memory.SRAMSize = RomHeader [0x28];
+		// Untrusted header byte feeds (1 << (SRAMSize + 3)) * 128 size
+		// math everywhere; 7 already means the full 128 KB buffer and
+		// larger values shift into undefined behavior, so clamp here.
+		if (Memory.SRAMSize > 7)
+			Memory.SRAMSize = 7;
 		strncpy (ROMName, (char *) &RomHeader[0x10], ROM_NAME_LEN - 1);
 		ROMSpeed = RomHeader [0x25];
 		ROMType = RomHeader [0x26];

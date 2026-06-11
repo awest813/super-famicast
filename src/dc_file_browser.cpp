@@ -96,7 +96,7 @@ bool DCFileBrowser::Browse(bool use_last)
 
 void DCFileBrowser::SetDirectory(const char* szdir)
 {
-	strcpy(m_dir, szdir);
+	snprintf(m_dir, sizeof(m_dir), "%s", szdir);
 }
 
 const char* DCFileBrowser::GetDirectory()
@@ -108,7 +108,7 @@ const char* DCFileBrowser::GetDirectory()
 
 void DCFileBrowser::SetHighestDirecty(const char* szdir)
 {
-	strcpy(m_highest_dir, szdir);
+	snprintf(m_highest_dir, sizeof(m_highest_dir), "%s", szdir);
 }
 
 const char* DCFileBrowser::GetHighestDirecty()
@@ -144,6 +144,9 @@ void DCFileBrowser::SetIcon(CPVRTexture* icon, const char* extension)
 void DCFileBrowser::OnChooseDir(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
 	DCFileBrowser* pBrowser = (DCFileBrowser*) pMenu->user_data;
+	// Refuse to descend rather than overflow/truncate the path buffer.
+	if (strlen(pBrowser->m_dir) + 1 + strlen(pMenuItem->GetText()) + 1 > sizeof(pBrowser->m_dir))
+		return;
 	strcat(pBrowser->m_dir, "/");
 	strcat(pBrowser->m_dir, pMenuItem->GetText());
 	pBrowser->m_menu.Stop();
@@ -152,7 +155,7 @@ void DCFileBrowser::OnChooseDir(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 void DCFileBrowser::OnChooseFile(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
 	DCFileBrowser* pBrowser = (DCFileBrowser*) pMenu->user_data;
-	snprintf(pBrowser->m_file_path, 4096, "%s/%s", pBrowser->m_dir, pMenuItem->GetText());
+	snprintf(pBrowser->m_file_path, sizeof(pBrowser->m_file_path), "%s/%s", pBrowser->m_dir, pMenuItem->GetText());
 	pBrowser->m_found = true;
 	pBrowser->m_menu.Stop();
 }

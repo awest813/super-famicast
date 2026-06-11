@@ -36,7 +36,20 @@ KOS_EXTRA_FLAGS = -D_XBOX -DUNZIP_SUPPORT -DNOASM -DSDD1_DECOMP -DSPC700_C -DVAR
 ifeq ($(ENABLE_NETPLAY),1)
 KOS_EXTRA_FLAGS += -DNETPLAY_SUPPORT
 endif
-KOS_COMMON_FLAGS = -mrelax -m4-single-only -fno-exceptions -fno-strict-aliasing
+# USE_STRICT_ALIASING=1 drops -fno-strict-aliasing for A/B testing; the flag
+# experiment log recorded the best FPS gain from removing it, but keep the
+# default conservative until verified on hardware.
+USE_STRICT_ALIASING ?= 0
+KOS_COMMON_FLAGS = -mrelax -m4-single-only -fno-exceptions
+ifneq ($(USE_STRICT_ALIASING),1)
+KOS_COMMON_FLAGS += -fno-strict-aliasing
+endif
+# USE_TEXTURE_DMA=1 uploads the SNES frame to VRAM with PVR DMA instead of
+# a blocking store-queue copy. Experimental; hardware validation required.
+USE_TEXTURE_DMA ?= 0
+ifeq ($(USE_TEXTURE_DMA),1)
+KOS_EXTRA_FLAGS += -DSFCAST_TEXTURE_DMA
+endif
 
 ifeq ($(wildcard $(KOS_PORTS)/include/plx/font.h),)
 KOS_PORTS = /opt/toolchains/dc/kos-ports
