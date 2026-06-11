@@ -33,22 +33,24 @@ now accepts `USE_STRICT_ALIASING=1` to drop the flag for A/B testing on
 hardware. Default stays `0` (unchanged behavior) until a hardware pass
 confirms no regressions, then flip the default.
 
-### S3. Asynchronous texture upload (hardware experiment)
+### S3. Asynchronous texture upload — KNOB ADDED, needs hardware
 
 `display_snes_screen()` does a synchronous `sq_cpy` of the full frame
-(~115 KB) then blocks in `pvr_wait_ready()`. The DMA path
-(`pvr_txr_load_dma` + `DMADoneSoDrawNow`) already exists but is commented
-out at `src/main.cpp:530`. Plan: gate it behind `SFCAST_TEXTURE_DMA` and
-measure on hardware — DMA frees the SH-4 during the copy but needs cache
-flushing and the callback path re-validated. Requires hardware; not safe to
-enable by inspection alone.
+(~115 KB) then blocks in `pvr_wait_ready()`. The DMA alternative
+(`pvr_txr_load_dma` + scene submit from the completion callback, with the
+required data-cache flush) is now compiled in with `USE_TEXTURE_DMA=1`.
+DMA frees the SH-4 during the copy; the callback path must be validated on
+real hardware before this can become the default. Default build unchanged.
 
 ### S4. Sound sync and mixing cost
 
 README documents sound as "not synced or fast". Next steps, in order:
 
-1. Profile `S9xMixSamplesO()` per frame with an `SFCAST_PROFILE` counter
-   (APU/DSP slot is still missing from the profile build).
+1. ~~Profile the sound path with an `SFCAST_PROFILE` counter.~~ DONE:
+   `S9xGenerateSound()` (poll + mix + SPU transfer) is now timed and
+   reported as `sound_us=` in the per-second profile line. The profile
+   clock also switched from `gettimeofday` to `timer_us_gettime64()` to
+   cut measurement overhead.
 2. Audit `sfcastGetSound` → `scherzo_snd_stream_poll` for redundant copies;
    samples currently pass through mix buffer → separation buffers → SPU DMA.
 3. Tie sample generation to emulated frame time instead of poll-time
@@ -95,10 +97,17 @@ If the firmware upload fails, the console hard-hangs with no diagnostics.
 Both waits now time out (~2 s), log, and continue without sound instead of
 hanging.
 
-### T6. Run-loop hardening (next)
+### T6. Run-loop hardening
 
-- Auto-save SRAM pause: move VMU writes out of the frame path or chunk them
-  (README documents a gameplay pause today).
+- Auto-save SRAM pause — MITIGATED: periodic auto-saves now CRC the SRAM
+  image and skip the slow whole-file VMU write when the content already
+  matches what was last written to the same save path. RTC games
+  (S-RTC/SPC7110) always write, because the save itself folds time data
+  into the image. Explicit menu saves always write. Known limitation: the
+  skip cannot detect a VMU swapped for another in the same port; use the
+  menu save after swapping cards. Remaining idea if
+  pauses persist for games that churn SRAM: chunked/incremental VMU
+  writes spread across frames.
 - Validate ROM header-derived sizes in `memmap.cpp` before allocation use
   (audit pass; needs test ROMs to verify behavior is unchanged).
 

@@ -5,6 +5,7 @@
 #include "vorbisfile.h"
 #include <mp3/sndmp3.h>
 #include <math.h>
+#include <zlib.h>
 
 #include "snes9x.h"
 #include "memmap.h"
@@ -529,14 +530,20 @@ void DMADoneSoDrawNow(void* data)
 
 static void display_snes_screen()
 {
+#ifdef SFCAST_TEXTURE_DMA
+	// Experimental (USE_TEXTURE_DMA=1): upload the frame with PVR DMA and
+	// submit the scene from the completion callback, freeing the SH-4
+	// during the copy. DMA reads physical memory, so the frame buffer must
+	// be flushed from the data cache first. Needs hardware validation.
+	dcache_flush_range((uintptr_t) GFX.Screen, GFX_Screen_Size);
+	pvr_wait_ready ();
+	pvr_txr_load_dma(GFX.Screen, snes_texture_addrs[texture_index], GFX_Screen_Size, 0, DMADoneSoDrawNow, NULL);
+	return;
+#endif
+
 	sq_cpy(snes_texture_addrs[texture_index], GFX.Screen, GFX_Screen_Size);
 	pvr_wait_ready ();
-	
-	//pvr_txr_load_dma(GFX.Screen, snes_texture_addrs[texture_index], GFX_Screen_Size, 0, DMADoneSoDrawNow, NULL);
-	//icache_flush_range((uint32) GFX.Screen, GFX_Screen_Size);
-	
-	//pvr_dma_transfer(GFX.Screen, (uint32) snes_texture_addrs[texture_index], GFX_Screen_Size, PVR_DMA_VRAM32, 0, NULL, NULL);
-	
+
 	pvr_scene_begin ();
 	pvr_list_begin (PVR_LIST_OP_POLY);
 	if (bilinear_filtering)
@@ -731,8 +738,13 @@ extern "C" void S9xSetPalette(void)
 	
 }
 
+// Content hash of the SRAM image last written, so periodic auto-saves can
+// skip the slow VMU write when nothing changed since the previous save.
+static uint32 last_sram_save_crc = 0;
+static char last_sram_save_path[0x100] = "";
+
 // Returns 1 on success, 0 on save failure, -1 when no VMU is available.
-static int FamicastSaveSRAM(char* out_vmu_slot, size_t out_size)
+static int FamicastSaveSRAM(char* out_vmu_slot, size_t out_size, bool skip_if_unchanged = false)
 {
 	char vmu_path[0x100];
 	if (!FindFirstVMU(vmu_path))
@@ -740,8 +752,28 @@ static int FamicastSaveSRAM(char* out_vmu_slot, size_t out_size)
 
 	char ctemp[0x100];
 	sprintf(ctemp, "%s/%X.srm", vmu_path, Memory.ROMCRC32);
+
+	// RTC chips fold time data into the SRAM image during the save itself,
+	// so their content can change without the game touching SRAM.
+	bool can_skip = skip_if_unchanged && !Settings.SRTC && !Settings.SPC7110RTC;
+	uint32 sram_crc = 0;
+	if (skip_if_unchanged)
+	{
+		sram_crc = crc32(0, ::SRAM, 0x20000);
+		if (can_skip && sram_crc == last_sram_save_crc &&
+			strcmp(ctemp, last_sram_save_path) == 0)
+			return 1;
+	}
+
 	if (!Memory.SaveSRAM(ctemp))
 		return 0;
+
+	if (skip_if_unchanged)
+	{
+		last_sram_save_crc = sram_crc;
+		strncpy(last_sram_save_path, ctemp, sizeof(last_sram_save_path) - 1);
+		last_sram_save_path[sizeof(last_sram_save_path) - 1] = '\0';
+	}
 
 	if (out_vmu_slot && out_size > 0)
 	{
@@ -754,7 +786,7 @@ static int FamicastSaveSRAM(char* out_vmu_slot, size_t out_size)
 extern "C" void S9xAutoSaveSRAM(void)
 {
 	if (auto_save_sram)
-		FamicastSaveSRAM(NULL, 0);
+		FamicastSaveSRAM(NULL, 0, true);
 }
 
 extern "C" void S9xMessage(int, int, const char *str)
@@ -887,7 +919,9 @@ uint32 last_sound_pos = 0;
 
 void S9xGenerateSound ()
 {
+	SfcastProfileSoundStart();
 	scherzo_snd_stream_poll();
+	SfcastProfileSoundEnd();
 }
 
 bool first_sfcastGetSound = false;
