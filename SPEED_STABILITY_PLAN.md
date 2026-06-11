@@ -108,8 +108,19 @@ hanging.
   menu save after swapping cards. Remaining idea if
   pauses persist for games that churn SRAM: chunked/incremental VMU
   writes spread across frames.
-- Validate ROM header-derived sizes in `memmap.cpp` before allocation use
-  (audit pass; needs test ROMs to verify behavior is unchanged).
+- ROM header-derived size audit — DONE for the cases found:
+  - Multi-part zip loading (`loadzip.cpp`) only bounded the first part;
+    later parts could overflow the ROM buffer by megabytes. Every part is
+    now checked against the remaining buffer and fails cleanly.
+  - `SRAMSize` header bytes above 7 fed `1 << (SRAMSize + 3)` shifts into
+    undefined behavior; clamped at both parse sites (7 already means the
+    full 128 KB buffer, so in-range behavior is unchanged).
+  - The checksum warning at `InitROM` evaluated `1 << (ROMSize - 7)` with
+    untrusted `ROMSize` (negative shift / signed overflow); now guarded.
+  - Note: zipped slot-1/slot-2 multi-cart ROMs extract to the ROM base
+    rather than the slot offset (`FileLoader` ZIP path ignores its buffer
+    argument) — pre-existing functional limitation, not a crash; load
+    Sufami Turbo slot carts unzipped.
 
 ## Verification
 
