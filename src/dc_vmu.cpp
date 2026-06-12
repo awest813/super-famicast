@@ -536,13 +536,19 @@ ndc_vmu_save(uint8 *src, uint32 src_len, maple_device_t *dev,
   int firstblk;
   
   if (!dev) return -1;
-  
+
+  // buf holds a 640-byte VMU header + up to 200 blocks of 512 bytes each.
+  // 1024 bytes are reserved for the header region in the save layout.
+  // Maximum usable payload is sizeof(buf) - 1024 = 101376 bytes.
+  if (src_len > sizeof(buf) - 1024)
+    return -1;
+
   save_len = 1024 + src_len;
   if (save_len % 512)
     save_blocks = save_len / 512 + 1;
   else
     save_blocks = save_len / 512;
-  
+
   memset(buf, 0, sizeof(buf));
   
   ndc_vmu_create_vmu_header (buf, desc_short, desc_long, 

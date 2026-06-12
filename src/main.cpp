@@ -1991,7 +1991,7 @@ void OnSaveSettings(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 void OnSelectTheme(DCMenu* pMenu, DCMenuItem* pMenuItem, int value)
 {
 	StopMusic();
-	strcpy(theme_dir, pMenuItem->GetText());
+	snprintf(theme_dir, sizeof(theme_dir), "%s", pMenuItem->GetText());
 	char* cur_thingy = strstr(theme_dir, " (current)");
 	if (cur_thingy)
 		*cur_thingy = '\0';

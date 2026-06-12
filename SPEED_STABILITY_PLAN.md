@@ -122,6 +122,27 @@ hanging.
     argument) — pre-existing functional limitation, not a crash; load
     Sufami Turbo slot carts unzipped.
 
+### T7. Second-pass string/buffer audit — DONE
+
+Additional issues found and fixed:
+
+- `main.cpp` `OnSelectTheme`: unbounded `strcpy` from a CD directory name
+  into the 256-byte `theme_dir`; replaced with `snprintf`.
+- `dc_menu.cpp` `Draw()`: unbounded `strcpy` of a heap-allocated menu item
+  string into a fixed 256-byte stack buffer `temptext`; replaced with
+  `strncpy` + explicit null terminator.
+- `snapshot.cpp` `UnfreezeBlock()`: `atoi` on a save-state file field had
+  no upper bound; a value above INT_MAX or a crafted large length would
+  allocate gigabytes on the heap, crashing or OOMing the console. Rejecting
+  blocks whose declared length is < 0 or > 1 MB (largest legitimate block
+  is 128 KB).
+- `dc_vmu.cpp` `ndc_vmu_save()`: the 200-block stack buffer (102,400 bytes)
+  was written without checking `src_len`, so a caller passing > 101,376
+  bytes would overflow the stack. Added an early return. Note: the function
+  is currently unreachable from normal save paths (SRAM saves go via
+  `fwrite`/KOS FS), but the guard closes the hole if the function is ever
+  wired up.
+
 ## Verification
 
 - No SH-ELF toolchain exists in this environment; changes in this pass are

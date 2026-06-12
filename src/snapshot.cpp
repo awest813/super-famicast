@@ -983,6 +983,13 @@ int UnfreezeBlock (STREAM stream, char *name, uint8 *block, int size)
 		REVERT_STREAM(stream, FIND_STREAM(stream)-11, 0);
 		return (WRONG_FORMAT);
     }
+	// Reject implausibly large block lengths from a malformed save file;
+	// largest legitimate block is 128 KB (SRAM/RAM). Cap at 1 MB.
+	if (len < 0 || len > 1024 * 1024)
+	{
+		REVERT_STREAM(stream, FIND_STREAM(stream)-11, 0);
+		return (WRONG_FORMAT);
+	}
 	
     if (len > size)
     {

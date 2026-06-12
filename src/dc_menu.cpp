@@ -479,12 +479,13 @@ void DCMenu::Draw()
 	
 	char temptext[0x100];
 	int32 curnull;
-	
+
 	for (; k < final_k && k < item_count; ++k)
 	{
 		curx = x;
 		curitem = m_items[k];
-		strcpy(temptext, curitem->m_text);
+		strncpy(temptext, curitem->m_text, sizeof(temptext) - 1);
+		temptext[sizeof(temptext) - 1] = '\0';
 		curnull = strlen(temptext);
 		while (true)
 		{
